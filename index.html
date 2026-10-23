@@ -142,7 +142,7 @@ function parseJSON(t) {
 
 function msg(cls, text) { $('result').innerHTML = '<div class="msg ' + cls + '">' + text + '</div>'; }
 
-const WORKER_URL = 'https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev'; // paste your Cloudflare Worker URL here
+const WORKER_URL = 'https://cool-forest-246camazonlistingai.akayaislive.workers.dev/'; // paste your Cloudflare Worker URL here
 const toDataURL = b => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(b); });
 
 async function run(prompt) {
