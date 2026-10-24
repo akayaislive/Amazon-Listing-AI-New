@@ -133,7 +133,7 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
 </div>
 <footer class="foot">
   <div class="dev">Developed by <strong>Ajay Kushwaha</strong></div>
-  <div><b>AKAYA AI</b> · Amazon listing assistant · Version 7 · your rules + expert role</div>
+  <div><b>AKAYA AI</b> · Amazon listing assistant · Version 8 · title format + product details check</div>
   <small>AKAYA AI is an independent tool and is not affiliated with Amazon. Always review the content and your category rules in Seller Central before publishing.</small>
 </footer>
 <script>
@@ -154,13 +154,34 @@ Do not invent certifications, warranty, dimensions, test results, compatibility,
 Follow Amazon A9/A10-style SEO: title for indexing and CTR, highlights for extra searchable keywords, bullets for conversion, description for long-tail keywords, backend terms for hidden keyword indexing.
 Before answering, count characters and fix any broken rule.`;
 
-const SHAPE_ONE = `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
-{"title":"","titleWhy":"short explanation","highlights":"","bullets":[{"label":"2-5 word label","text":"explanation after the label"}],"description":"","backend":""}
+const SHAPE_FIX = `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
+{"bullets":[{"label":"2-5 word label","text":"explanation after the label"}],"description":"","backend":""}
 The "bullets" array must contain exactly 8 items. Do not put the colon inside "label".`;
-const SHAPE_MANY = `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
-{"titles":["title option 1","title option 2","title option 3","title option 4","title option 5"],"titleWhy":"short explanation for this product","highlights":["option 1","option 2","option 3"],"bullets":[{"options":[{"label":"2-5 word label","text":"text after the label"}]}],"description":"","backend":""}
-How to fill it: write 5 different titles, each 60-75 characters (never above 75), each starting with the brand name (if one is given) and having the primary keyword phrase once within its first 50 characters, followed by real product details (type, size, material, feature, use), no repeated word, and a different structure and length for each title. Write 3 item-highlight options, each 100-125 characters, in the format Second Keyword + product details + third keyword + use. The "bullets" array must hold exactly 8 items in this order: main benefit, quality/material, compatibility, use/installation, problem solution, technical detail, care/safe use, package content. Each item has exactly 3 options for that same topic. Each option must be 150-200 characters in total (label + colon + space + text), and the 3 options must have different lengths. Do not put the colon inside "label". The app will pick the options that pass its checks.`;
-
+const SHAPE_PARTS = `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
+{"titleParts":{"productType":["..."],"spec":["..."],"material":["..."],"benefit":["..."]},"highlightParts":{"details":["..."],"use":["..."]}}
+Write 4 new options for every key. Every phrase is 2-5 words taken from the product details, with different lengths, and never repeats a word from the brand, the main keyword or another phrase. For productType use "" as one option if the main keyword already names the product type.`;
+function budgetText() {
+  const brand = brandVal(), k = kwList(), kw = titleCase(k[0] || '');
+  const pre = [brand, kw].filter(Boolean).join(' ');
+  const tLo = Math.max(10, 60 - pre.length - 1), tHi = Math.max(tLo + 5, 75 - pre.length - 1);
+  const fx = [k[1], k[2]].filter(Boolean).join(' ');
+  const hLo = Math.max(20, 100 - fx.length - 2), hHi = Math.max(hLo + 5, 125 - fx.length - 2);
+  return 'Title budget: the app writes "' + pre + '" (' + pre.length + ' characters) first. All the title phrases you write (productType, spec, material, benefit), joined with single spaces, should add about ' + tLo + ' to ' + tHi + ' characters, so the whole title is 60-75 characters. Write phrases of different lengths (some short, some longer) so the app can find a fitting mix.\nHighlights budget: the app adds ' + (fx ? '"' + fx + '"' : 'no keywords') + '. The details and use phrases together should add about ' + hLo + ' to ' + hHi + ' characters so the highlights are 100-125 characters.';
+}
+function shapeMany() {
+  return `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
+{"titleParts":{"productType":["..."],"spec":["..."],"material":["..."],"benefit":["..."]},"titleWhy":"short explanation for this product","highlightParts":{"details":["..."],"use":["..."]},"bullets":[{"options":[{"label":"2-5 word label","text":"text after the label"}]}],"description":"","backend":""}
+How the app builds the title: Brand Name + Product Type + Main Keyword + Size/Spec + Material/Compatibility + benefit, joined with spaces, every word starting with a capital letter. The app adds the brand name and the main keyword itself, so you write only these phrases (3-4 options each, 2-5 words each, with different lengths):
+- productType: the product type name; use "" as one option if the main keyword already names the product type.
+- spec: size or specification taken from Technical Details.
+- material: material or compatibility taken from Technical Details or Product Feature.
+- benefit: a short benefit taken from Product Feature, Special Feature or Main Use.
+A phrase must never repeat a word that is in the brand, the main keyword or another phrase, and must not contain promotional words.
+How the app builds the item highlights: Second Keyword + product details + Third Keyword + Use. The app adds the keywords itself, so you write: details (3-4 options: facts from the product details) and use (3-4 options: the main use, for example "for bathroom cleaning").
+${budgetText()}
+Bullets: exactly 8 items in this order: 1 main benefit, 2 quality/material, 3 compatibility, 4 use/installation, 5 problem solution, 6 technical detail, 7 care/safe use, 8 package content. Each item has 4 options for that topic. Every option must be 150-200 characters in total (label + colon + space + text), with different lengths, and must contain at least one specific fact (a number, size, material, feature or package item) copied from the product details for that topic: 1 from Product Feature or Special Feature; 2 from Technical Details or Product Feature; 3 from Technical Details, Model Name or Product Name; 4 from Main Use or How It Works; 5 from Main Use or Product Feature; 6 from Technical Details; 7 from Product Feature or Technical Details; 8 from Package Contains. Do not put the colon inside "label".
+The description must also use many specific facts from the product details (numbers, materials, features, use, package contents). Never write generic text that could fit any product. The app picks the options that pass its checks.`;
+}
 const $ = id => document.getElementById(id);
 const STOP = new Set(['for','and','with','the','of','to','in','a','an','&','or','on','by','at','-','|']);
 const WHY = {
@@ -236,18 +257,60 @@ function kwOk(t, pk) {
   const ws = p.split(/\s+/).filter(w => w && !STOP.has(w));
   return ws.length > 0 && ws.every(w => new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(head));
 }
+const cap1 = x => x.charAt(0).toUpperCase() + x.slice(1);
+const titleCase = x => x.replace(/(^|[\s\-\/(])([a-z])/g, (m, a, b) => a + b.toUpperCase());
+const strs = v => (Array.isArray(v) ? v : [v]).filter(x => typeof x === 'string').map(x => x.trim().replace(/\s+/g, ' ')).filter(Boolean);
+const uniq = a => [...new Set(a)];
+const TSTOP = new Set(['the','and','for','with','are','you','your','this','that','from','not','provided','will','can','all','use','used','using','any','has','have','its','set','also','more','than','into','out','per','via','one','two']);
+const toks = s => uniq((String(s || '').toLowerCase().match(/[a-z0-9][a-z0-9.]*/g) || []).map(w => w.replace(/\.+$/, '').replace(/(.{3,})s$/, '$1')).filter(w => (w.length >= 3 || /\d/.test(w)) && !TSTOP.has(w)));
+const FIELD = id => ($(id).value || '').trim();
+const ALL_IDS = ['pname', 'model', 'how', 'special', 'tech', 'feat', 'use', 'pack'];
+const BULLET_MAP = [['feat', 'special'], ['tech', 'feat'], ['tech', 'feat', 'pname', 'model'], ['use', 'how'], ['use', 'feat', 'how'], ['tech'], ['feat', 'tech', 'use'], ['pack']];
+const detailSet = (ids, skip) => { const s = new Set(toks(ids.map(FIELD).join(' '))); (skip || []).forEach(w => s.delete(w)); return s; };
+const hitsIn = (set, text) => toks(text).filter(w => set.has(w)).length;
+const hits = (text, ids, skip) => { const av = detailSet(ids, skip); return {avail: av.size, n: hitsIn(av, text)}; };
 function dist(n, lo, hi) { return n < lo ? lo - n : n > hi ? n - hi : 0; }
-function titlePen(t) {
-  let p = dist(len(t), 60, 75) * 3 + (len(t) > 75 ? 200 : 0);
-  const pk = (kwList()[0] || '').toLowerCase();
-  if (pk && !kwOk(t, pk)) p += 40;
-  if (!brandOk(t)) p += 30;
+function repeatedWords(t) {
   const wc = {}; t.toLowerCase().split(/[\s,\/]+/).filter(w => w && !STOP.has(w)).forEach(w => wc[w] = (wc[w] || 0) + 1);
-  p += Object.values(wc).filter(c => c > 1).length * 30;
-  if (BANNED.test(t) || EMOJI.test(t)) p += 50;
-  return p;
+  return Object.keys(wc).filter(w => wc[w] > 1);
 }
-function highPen(h) { let p = dist(len(h), 100, 125) * 3 + Math.abs(112 - len(h)) * 0.05; if (!h) p += 100; if (BANNED.test(h) || EMOJI.test(h)) p += 50; return p; }
+
+function buildTitle(tp) {
+  tp = tp || {};
+  const brand = brandVal(), pk = kwList()[0] || '', kw = titleCase(pk);
+  const o = k => uniq(['', ...strs(tp[k]).slice(0, 7)]);
+  const av = detailSet(ALL_IDS, toks(brand + ' ' + kw));
+  let bestT = '', bestP = Infinity;
+  for (const pt of o('productType')) for (const sp of o('spec')) for (const ma of o('material')) for (const be of o('benefit')) {
+    const t = titleCase([brand, pt, kw, sp, ma, be].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim());
+    const n = len(t);
+    let p = dist(n, 60, 75) * 5 + (n > 75 ? 1000 : 0) + Math.abs(n - 68) * 0.2;
+    p += (4 - [pt, sp, ma, be].filter(Boolean).length) * 3;
+    p += repeatedWords(t).length * 60;
+    if (BANNED.test(t) || EMOJI.test(t)) p += 300;
+    if (av.size && !hitsIn(av, t)) p += 40;
+    if (p < bestP) { bestP = p; bestT = t; }
+  }
+  return bestT;
+}
+function buildHighlights(hp) {
+  hp = hp || {};
+  const k = kwList(), k2 = k[1] || '', k3 = k[2] || '';
+  const o = key => uniq(['', ...strs(hp[key]).slice(0, 7)]);
+  const av = detailSet(ALL_IDS, toks(k2 + ' ' + k3));
+  let bestH = '', bestP = Infinity;
+  for (const dt of o('details')) for (const us of o('use')) {
+    const h = titleCase([k2, dt, k3, us].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim());
+    const n = len(h);
+    let p = dist(n, 100, 125) * 5 + Math.abs(n - 112) * 0.1 + ([dt, us].filter(Boolean).length < 2 ? 4 : 0);
+    if (BANNED.test(h) || EMOJI.test(h)) p += 300;
+    if (av.size && !hitsIn(av, h)) p += 40;
+    if (p < bestP) { bestP = p; bestH = h; }
+  }
+  return bestH;
+}
+function rebuild(d) { d.title = buildTitle(d.parts.titleParts); d.highlights = buildHighlights(d.parts.highlightParts); }
+
 function bulletPen(b) {
   const f = bulletFull(b); let p = dist(len(f), 150, 200) * 3;
   const n = (b.label || '').trim().split(/\s+/).length; if (n < 2 || n > 5) p += 20;
@@ -255,15 +318,16 @@ function bulletPen(b) {
   return p;
 }
 const best = (arr, pen) => arr.map(x => [pen(x), x]).sort((a, b) => a[0] - b[0])[0][1];
+function pickBullet(b) {
+  const o = ((b && (b.options || b.variants)) || (b && b.label ? [b] : [])).filter(x => x && x.label && x.text).map(x => ({label: String(x.label).replace(/:+\s*$/, '').trim(), text: String(x.text).trim()}));
+  if (!o.length) return {label: 'Product Benefit', text: ''};
+  return best(o, bulletPen);
+}
 function pickDraft(d) {
-  if (!d || !Array.isArray(d.titles)) return d;
-  const strs = v => (Array.isArray(v) ? v : [v]).filter(x => typeof x === 'string' && x.trim()).map(x => x.trim());
-  const ti = strs(d.titles), hi = strs(d.highlights);
-  const bl = (d.bullets || []).map(b => {
-    const o = (b.options || b.variants || (b.label ? [b] : [])).filter(x => x && x.label && x.text).map(x => ({label: String(x.label).replace(/:+\s*$/, '').trim(), text: String(x.text).trim()}));
-    return o.length ? best(o, bulletPen) : {label: 'Product Benefit', text: ''};
-  });
-  return {title: ti.length ? best(ti, titlePen) : '', titleWhy: d.titleWhy || '', highlights: hi.length ? best(hi, highPen) : '', bullets: bl, description: d.description || '', backend: d.backend || ''};
+  if (!d) return d;
+  const out = {parts: {titleParts: d.titleParts || {}, highlightParts: d.highlightParts || {}}, titleWhy: d.titleWhy || '', bullets: (d.bullets || []).map(pickBullet), description: d.description || '', backend: d.backend || ''};
+  rebuild(out);
+  return out;
 }
 
 function normBackend(d) {
@@ -279,27 +343,40 @@ function normBackend(d) {
   d.backend = s;
 }
 
-function detailIssues(d) {
-  const L = [], t = d.title || '', h = d.highlights || '', bl = Array.isArray(d.bullets) ? d.bullets : [];
-  const rng = (name, txt, lo, hi) => {
-    const n = len(txt), mid = Math.round((lo + hi) / 2);
-    if (n < lo) L.push(name + ' is ' + n + ' characters, too short. Add at least ' + (lo - n) + ' characters (aim for about ' + mid + '). Current text: ' + txt);
-    else if (n > hi) L.push(name + ' is ' + n + ' characters, too long. Remove at least ' + (n - hi) + ' characters (aim for about ' + mid + '). Current text: ' + txt);
-  };
-  rng('Title', t, 60, 75);
-  if (!h) L.push('Item highlights are empty. Write 100-125 characters.'); else rng('Item highlights', h, 100, 125);
+function titleHighIssues(d) {
+  const L = [], t = d.title || '', h = d.highlights || '', n = len(t), hn = len(h);
+  const kk = kwList(), tH = hits(t, ALL_IDS, toks(brandVal() + ' ' + (kk[0] || ''))), hH = hits(h, ALL_IDS, toks((kk[1] || '') + ' ' + (kk[2] || '')));
+  if (n < 60) L.push('The title built from your phrases is only ' + n + ' characters (needs 60-75). Write longer phrases from the product details.');
+  if (n > 75) L.push('The title built from your phrases is ' + n + ' characters (maximum 75). Write shorter phrases.');
+  const rp = repeatedWords(t);
+  if (rp.length) L.push('Words repeat in the title: ' + rp.join(', ') + '. Write phrases that do not reuse words from the brand, the main keyword or each other.');
+  if (BANNED.test(t)) L.push('The title contains a promotional word. Remove it.');
+  if (tH.avail && !tH.n) L.push('The title does not use any product detail. Build the phrases from Technical Details, Product Feature and Main Use.');
+  if (hn < 100) L.push('The highlights are only ' + hn + ' characters (needs 100-125). Write longer details and use phrases.');
+  if (hn > 125) L.push('The highlights are ' + hn + ' characters (maximum 125). Write shorter phrases.');
+  if (hH.avail && !hH.n) L.push('The highlights do not use any product detail. Build the details phrases from the product details.');
+  return L;
+}
+
+function otherIssues(d) {
+  const L = [], bl = Array.isArray(d.bullets) ? d.bullets : [];
   if (bl.length !== 8) L.push('There are ' + bl.length + ' bullets; there must be exactly 8.');
-  bl.forEach((b, i) => rng('Bullet ' + (i + 1) + ' (label + colon + text)', bulletFull(b), 150, 200));
-  const pk = (kwList()[0] || '').trim();
-  if (pk && !kwOk(t, pk)) L.push('Title must contain the primary keyword "' + pk + '" (the exact phrase, or all of its words) within the first 60 characters, and every word must appear only once. Current title: ' + t);
-  { const wc = {}; t.toLowerCase().split(/[\s,\/]+/).filter(w => w && !STOP.has(w)).forEach(w => wc[w] = (wc[w] || 0) + 1); const rp = Object.keys(wc).filter(w => wc[w] > 1);
-    if (rp.length) L.push('Title repeats these words: ' + rp.join(', ') + '. Rewrite the title so every word appears only once and add real product details from the input (size, material, feature, use) so it reads naturally. It must be 60-75 characters. Current title: ' + t); }
-  checks(d).filter(x => x.s === 'Fail' && !/^(Title length|Primary|No repeated words in title|Highlights|Exactly 8|Bullets 150|Backend)/.test(x.c)).forEach(x => L.push(x.c + ': ' + x.n));
+  bl.forEach((b, i) => {
+    const f = bulletFull(b), n = len(f), mid = 175;
+    if (n < 150) L.push('Bullet ' + (i + 1) + ' is ' + n + ' characters, too short. Add at least ' + (150 - n) + ' characters (aim for about ' + mid + '). Current text: ' + f);
+    else if (n > 200) L.push('Bullet ' + (i + 1) + ' is ' + n + ' characters, too long. Remove at least ' + (n - 200) + ' characters (aim for about ' + mid + '). Current text: ' + f);
+    const lw = (b.label || '').trim().split(/\s+/).length;
+    if (lw < 2 || lw > 5) L.push('Bullet ' + (i + 1) + ' label must be 2-5 words.');
+    const m = BULLET_MAP[i] || [], h = hits(f, m, []);
+    if (h.avail && !h.n) L.push('Bullet ' + (i + 1) + ' does not use any specific fact from your product details. Rewrite it with real facts (numbers, materials, features, package items) from: ' + m.map(FIELD).filter(Boolean).join(' | ').slice(0, 260) + '. Current text: ' + f);
+  });
+  const de = d.description || '', dh = hits(de, ALL_IDS, []), need = Math.min(5, Math.ceil(dh.avail / 4));
+  if (dh.avail && dh.n < need) L.push('The description uses too few of your product details (' + dh.n + ' found, ' + need + ' needed). Include specific facts: numbers, materials, features, use and package items from the input.');
+  checks(d).filter(x => x.s === 'Fail' && !/^(Title|Brand|Primary|No repeated|Highlights|Every|Exactly 8|Bullet|Backend|Description uses)/.test(x.c)).forEach(x => L.push(x.c + ': ' + x.n));
   if (!d.backend) L.push('Backend search terms are empty. Write lowercase terms separated by single spaces, under 249 bytes, no commas.');
   return L;
 }
 
-const titleCase = x => x.replace(/\b[a-z]/g, c => c.toUpperCase());
 function polish(d) {
   let t = (d.title || '').trim();
   const seen = new Set();
@@ -315,7 +392,7 @@ function polish(d) {
     while (w.length > 1 && STOP.has(w[w.length - 1].toLowerCase())) w.pop();
     t = w.join(' ');
   }
-  d.title = t.replace(/[,\s]+$/, '');
+  d.title = titleCase(t.replace(/[,\s]+$/, ''));
   (d.bullets || []).forEach(b => {
     const room = 199 - (len(b.label) + 2);
     if (len(b.text) > room && room > 40) {
@@ -327,23 +404,46 @@ function polish(d) {
   normBackend(d);
 }
 
+function mergeParts(r) {
+  if (!r) return;
+  [['titleParts', ['productType', 'spec', 'material', 'benefit']], ['highlightParts', ['details', 'use']]].forEach(([g, keys]) => {
+    const src = r[g] || {}, dst = current.parts[g] = current.parts[g] || {};
+    keys.forEach(k => { dst[k] = uniq([...strs(src[k]), ...strs(dst[k])]); });
+  });
+}
+function applyOther(r) {
+  if (!r) return;
+  if (Array.isArray(r.bullets) && r.bullets.length) current.bullets = r.bullets.map(pickBullet);
+  if (typeof r.description === 'string' && r.description.trim()) current.description = r.description;
+  if (typeof r.backend === 'string' && r.backend.trim()) current.backend = r.backend;
+}
+function partsPrompt(reasons) {
+  return RULES + '\n' + SHAPE_PARTS + '\n' + budgetText() + '\n\n' + details() + '\n\nThe last attempt failed because:\n- ' + reasons.join('\n- ') +
+    '\n\nPhrases already written (write NEW phrases, with other lengths; do not copy these):\n' + JSON.stringify(current.parts) + '\n\nReturn the same JSON shape only.';
+}
+function fixPrompt(issues) {
+  return RULES + '\n' + SHAPE_FIX + '\n\n' + details() + '\n\nCurrent draft:\n' + JSON.stringify({bullets: current.bullets, description: current.description, backend: current.backend}) +
+    '\n\nThese rules are broken:\n- ' + issues.join('\n- ') +
+    '\n\nFix the broken items and keep everything else unchanged. The title and highlights are built by the app, so do not write them. Count characters exactly (a bullet counts its label, colon and space) and aim for the middle of each range. Use real facts from the product details. Return the same JSON shape only.';
+}
+
 let repairErr = '';
 async function repair() {
   repairErr = '';
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 3; i++) {
     normBackend(current);
-    const issues = detailIssues(current);
-    if (!issues.length) return;
-    msg('warn', 'Fixing ' + issues.length + ' rule issue' + (issues.length > 1 ? 's' : '') + ' automatically (attempt ' + i + ' of 5)…');
-    const p = RULES + '\n' + SHAPE_ONE + '\n\n' + details() + '\n\nHere is the current draft:\n' + JSON.stringify(current) +
-      '\n\nThese rules are broken:\n- ' + issues.join('\n- ') +
-      '\n\nFix the broken items and keep everything else unchanged. Count characters exactly, including spaces, and for bullets include the label and colon. Aim for the middle of each range. Return the same JSON shape only.';
-    try { current = pickDraft((await post(p, false)).d); } catch (e) { repairErr = e && e.message ? e.message : 'unknown error'; break; }
+    const ti = titleHighIssues(current), oi = otherIssues(current);
+    if (!ti.length && !oi.length) break;
+    msg('warn', 'Fixing ' + (ti.length + oi.length) + ' rule issue' + (ti.length + oi.length > 1 ? 's' : '') + ' automatically (attempt ' + i + ' of 3)…');
+    try {
+      if (ti.length) { mergeParts((await post(partsPrompt(ti), false)).d); rebuild(current); }
+      if (oi.length) applyOther((await post(fixPrompt(oi), false)).d);
+    } catch (e) { repairErr = e && e.message ? e.message : 'unknown error'; break; }
   }
   polish(current);
 }
 function showRepairErr() {
-  if (repairErr && detailIssues(current).length) $('result').insertAdjacentHTML('afterbegin', '<div class="msg warn">Automatic fixing stopped: ' + esc(repairErr) + '</div>');
+  if (repairErr && (titleHighIssues(current).length || otherIssues(current).length)) $('result').insertAdjacentHTML('afterbegin', '<div class="msg warn">Automatic fixing stopped: ' + esc(repairErr) + '</div>');
 }
 
 function lock(on) { busy = on; $('go').disabled = on; }
@@ -373,7 +473,9 @@ async function manualFix() {
 
 $('go').onclick = () => {
   if (!$('pname').value.trim() && !imgBlob) { msg('bad', 'Add a product name or a product image first.'); return; }
-  run(RULES + '\n' + SHAPE_MANY + '\n\n' + details() + (imgBlob ? '\n\nA product image is attached. Use it only for visible facts.' : ''));
+  if (!kwList().length) { msg('bad', 'Add at least one keyword. The first keyword is the main keyword.'); return; }
+  if (!['how', 'special', 'tech', 'feat', 'use', 'pack'].some(id => FIELD(id))) { msg('bad', 'Add some product details (features, technical details, main use or package contents). Without them the listing will be generic.'); return; }
+  run(RULES + '\n' + shapeMany() + '\n\n' + details() + (imgBlob ? '\n\nA product image is attached. Use it only for visible facts.' : ''));
 };
 
 const len = s => [...(s || '')].length;
@@ -403,6 +505,14 @@ function checks(d) {
   add('Backend under 249 bytes', bytes(be) > 0 && bytes(be) < 249, bytes(be) + ' bytes');
   add('Backend: no commas, lowercase, single spaces', !/,/.test(be) && be === be.toLowerCase() && !/\s{2,}/.test(be) && !/\bb0[a-z0-9]{8}\b/i.test(be), 'Format check');
   add('Description reads naturally', de.length >= 450 && !/^\s*[A-Z][^.\n]{0,40}:\s*$/m.test(de), len(de) + ' characters, no heading lines');
+  { const kk = kwList(), tH = hits(t, ALL_IDS, toks(brandVal() + ' ' + (kk[0] || ''))), hH = hits(h, ALL_IDS, toks((kk[1] || '') + ' ' + (kk[2] || '')));
+    add('Every title word starts with a capital', titleCase(t) === t, titleCase(t) === t ? 'Title Case' : 'Some words start with a small letter');
+    add('Title uses your product details', !tH.avail || tH.n > 0, tH.avail ? tH.n + ' detail word(s) used' : 'No details entered');
+    add('Highlights use your product details', !hH.avail || hH.n > 0, hH.avail ? hH.n + ' detail word(s) used' : 'No details entered');
+    const bf = bl.map((b, i) => { const m = BULLET_MAP[i] || [], x = hits(bulletFull(b), m, []); return x.avail && !x.n ? 'B' + (i + 1) : null; }).filter(Boolean);
+    add('Bullets use your product details', !bf.length, bf.length ? 'No detail used in: ' + bf.join(', ') : 'Every bullet uses a detail');
+    const dh = hits(de, ALL_IDS, []), need = Math.min(5, Math.ceil(dh.avail / 4));
+    add('Description uses your product details', !dh.avail || dh.n >= need, dh.avail ? dh.n + ' detail words used' : 'No details entered'); }
   add('No invented claims or package items', false, 'Compare against your own input before publishing', true);
   add('Amazon 2026 compliance', false, 'Final check in Seller Central is still recommended', true);
   return r;
