@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AKAYA AI – Amazon Listing Assistant</title>
+<style>
+:root{--bg:#f3f5fa;--card:#fff;--text:#0f172a;--mut:#5b6677;--line:#e2e7f0;--acc:#ff9900;--acc2:#ffb84d;--navy:#232f3e;--soft:#fff7e8;--ok:#117a3d;--okb:#e3f5ea;--bad:#b42318;--badb:#fde8e6;--warn:#8a5a00;--warnb:#fff3d6;--sh:0 6px 24px rgba(15,23,42,.07);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0f16;--card:#151b26;--text:#eaeef5;--mut:#9aa6b8;--line:#263041;--soft:#241d0e;--ok:#5fd68f;--okb:#12301f;--bad:#ff8a80;--badb:#3a1a18;--warn:#ffcf70;--warnb:#33270c;--sh:0 6px 24px rgba(0,0,0,.35);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0b0f16;--card:#151b26;--text:#eaeef5;--mut:#9aa6b8;--line:#263041;--soft:#241d0e;--ok:#5fd68f;--okb:#12301f;--bad:#ff8a80;--badb:#3a1a18;--warn:#ffcf70;--warnb:#33270c;--sh:0 6px 24px rgba(0,0,0,.35);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px 40px}
+.hero{background:radial-gradient(900px 300px at 85% -20%,rgba(255,153,0,.35),transparent 60%),linear-gradient(135deg,#0f1620,#232f3e 65%,#37475a);color:#fff;padding:26px 16px 70px}
+.hero-in{max-width:1120px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#1b1200;font-weight:900;font-size:24px;display:grid;place-items:center;box-shadow:0 6px 18px rgba(255,153,0,.45)}
+.brand b{font-size:24px;letter-spacing:.06em}.brand b span{color:var(--acc)}
+.hero h1{font-size:clamp(24px,4.4vw,38px);line-height:1.18;margin:20px 0 8px;max-width:760px}
+.hero p{margin:0;color:#c9d3e0;max-width:680px;font-size:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);border-radius:99px;padding:4px 12px;font-size:13px;color:#eef2f8}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1120px;margin:-44px auto 20px;padding:0 16px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--sh);display:flex;gap:12px;align-items:flex-start}
+.step i{font-style:normal;flex:none;width:30px;height:30px;border-radius:50%;background:var(--acc);color:#1b1200;font-weight:800;display:grid;place-items:center}
+.step b{display:block}.step span{color:var(--mut);font-size:13px}
+@media (max-width:760px){.steps{grid-template-columns:1fr;margin-top:-40px}}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:18px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:var(--sh)}
+.card h2{font-size:16px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card h2:before{content:"";width:4px;height:18px;border-radius:3px;background:var(--acc);margin-right:2px;flex:none}
+.card h2 button{margin-left:auto}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}
+input,textarea,select{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;transition:border-color .15s,box-shadow .15s}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(255,153,0,.22)}
+textarea{min-height:64px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.two{grid-template-columns:1fr}}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:7px 12px}
+button:hover{border-color:var(--acc)}
+button.pri{background:linear-gradient(135deg,var(--acc),var(--acc2));border:0;color:#1b1200;font-weight:800;font-size:16px;padding:13px 16px;width:100%;margin-top:16px;box-shadow:0 8px 20px rgba(255,153,0,.35)}
+button.pri:hover{filter:brightness(1.05)}
+button.sm{font-size:12px;padding:3px 10px}
+button:disabled{opacity:.55;cursor:not-allowed}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mut);cursor:pointer;background:var(--bg)}
+.drop:hover{border-color:var(--acc)}
+.drop img{max-width:100%;max-height:180px;border-radius:10px;display:block;margin:0 auto 6px}
+.hint{font-size:12px;color:var(--mut);margin-top:6px}
+.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:99px;padding:2px 10px;white-space:nowrap}
+.ok{background:var(--okb);color:var(--ok)}.bad{background:var(--badb);color:var(--bad)}.warn{background:var(--warnb);color:var(--warn)}
+.out{white-space:pre-wrap;overflow-wrap:anywhere}
+.why{color:var(--mut);font-size:13px;margin-top:8px}
+.whyx{margin-top:12px;border:1px solid var(--line);background:var(--soft);border-radius:12px;padding:8px 12px}
+.whyx summary{cursor:pointer;font-weight:700;font-size:13px}
+.whyx ul{margin:8px 0 2px;padding-left:18px;font-size:13px;color:var(--mut)}
+.whyx li{margin:3px 0}
+.bl{margin:0 0 10px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.bl .meta,.meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.msg{padding:11px 14px;border-radius:12px;margin-bottom:12px;font-size:14px}
+.empty{color:var(--mut);text-align:center;padding:46px 14px}
+.empty b{display:block;font-size:18px;color:var(--text);margin-bottom:6px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.info{margin-top:30px}
+.info h3{font-size:20px;margin:0 0 4px}.info>p{color:var(--mut);margin:0 0 14px}
+.ig{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.ig{grid-template-columns:1fr 1fr}}@media (max-width:540px){.ig{grid-template-columns:1fr}}
+.ic{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--sh)}
+.ic b{display:block;margin-bottom:4px}.ic span{color:var(--mut);font-size:13px}
+.foot{background:#0f1620;color:#c9d3e0;text-align:center;padding:26px 16px;font-size:14px}
+.foot b{color:#fff}.foot .dev{font-size:16px;color:#fff;margin-bottom:6px}.foot .dev strong{color:var(--acc)}
+.foot small{display:block;opacity:.7;max-width:640px;margin:6px auto 0}
+</style>
+</head>
+<body>
+<header class="hero"><div class="hero-in">
+  <div class="brand"><div class="logo">A</div><b>AKAYA <span>AI</span></b></div>
+  <h1>Amazon tasks made easy, built on Amazon content guidelines</h1>
+  <p>Upload a product photo, add the basic details, and get a complete, search-friendly listing in minutes. Every result is checked against clear rules before you copy it.</p>
+  <div class="chips"><span class="chip">Optimized title</span><span class="chip">Item highlights</span><span class="chip">8 bullet points</span><span class="chip">Description</span><span class="chip">Backend search terms</span><span class="chip">Live rule check</span></div>
+</div></header>
+<div class="steps">
+  <div class="step"><i>1</i><div><b>Add product details</b><span>Photo, features, use, package contents and keywords.</span></div></div>
+  <div class="step"><i>2</i><div><b>AKAYA AI writes and checks</b><span>It fixes length, keyword and wording rules automatically.</span></div></div>
+  <div class="step"><i>3</i><div><b>Copy and publish</b><span>Review the result, then paste it into Seller Central.</span></div></div>
+</div>
+<div class="wrap">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>Product image</h2>
+        <div class="drop" id="drop"><div id="dropTxt">Click to upload a product photo (JPG, PNG, WEBP)</div></div>
+        <input type="file" id="file" accept="image/*" hidden>
+        <div class="hint">The AI reads the image for color, shape, material and visible features. It will not invent anything it cannot see or that you did not provide.</div>
+      </div>
+      <div class="card">
+        <h2>Product details</h2>
+        <div class="two">
+          <div><label for="brand">Brand name</label><input id="brand"></div>
+          <div><label for="pname">Product name</label><input id="pname"></div>
+        </div>
+        <label for="model">Model name</label><input id="model">
+        <label for="how">How it works</label><textarea id="how"></textarea>
+        <label for="special">Special feature</label><textarea id="special"></textarea>
+        <label for="tech">Technical details</label><textarea id="tech" placeholder="Size, material, voltage, weight, etc."></textarea>
+        <label for="feat">Product feature</label><textarea id="feat"></textarea>
+        <label for="use">Main use</label><textarea id="use"></textarea>
+        <label for="pack">Package contains</label><textarea id="pack"></textarea>
+        <label for="warr">Warranty / support</label><input id="warr">
+        <label for="kw">Keywords</label>
+        <textarea id="kw" placeholder="One per line or comma separated. First keyword = primary keyword."></textarea>
+        <button class="pri" id="go">Generate listing</button>
+      </div>
+    </div>
+    <div id="result"><div class="card empty"><b>Your listing will appear here</b>Fill in the details on the left and press Generate listing.</div></div>
+  </div>
+  <section class="info">
+    <h3>Amazon listing guidelines at a glance</h3>
+    <p>AKAYA AI follows these principles in every listing it writes.</p>
+    <div class="ig">
+      <div class="ic"><b>Accurate claims only</b><span>No invented certifications, warranty, sizes or test results. If a detail is missing, it is left out.</span></div>
+      <div class="ic"><b>No promotional words</b><span>Words like best, free, sale or guaranteed are avoided, because Amazon expects factual content.</span></div>
+      <div class="ic"><b>Keywords where they count</b><span>The main keyword goes near the start of the title. Other keywords are spread over highlights, bullets and description.</span></div>
+      <div class="ic"><b>Mobile-first reading</b><span>Short, clear lines that are easy to read on a phone, where most shoppers browse.</span></div>
+      <div class="ic"><b>Clean formatting</b><span>No emojis, HTML or repeated words, and no competitor names.</span></div>
+      <div class="ic"><b>Correct package content</b><span>Only the items you list are mentioned, so buyers know exactly what they get.</span></div>
+    </div>
+  </section>
+</div>
+<footer class="foot">
+  <div class="dev">Developed by <strong>Ajay Kushwaha</strong></div>
+  <div><b>AKAYA AI</b> · Amazon listing assistant · Version 4 (auto rule-fix on)</div>
+  <small>AKAYA AI is an independent tool and is not affiliated with Amazon. Always review the content and your category rules in Seller Central before publishing.</small>
+</footer>
+<script>
+const RULES = `You are an Amazon SEO Listing Expert. Create a 2026 Amazon-compliant, SEO-optimized listing using only the product details, product image and keywords given.
+Rules:
+Title must be 65-75 characters (count every character incl. spaces).
+Title format: Product/Product Type + Main Keyword + Size/Spec + Material/Compatibility + benefit.
+Put the exact primary keyword phrase (the first keyword given, word for word) within the first 40 characters of the title.
+Do not repeat words unnecessarily. Do not add pack count in title unless clearly required.
+No emojis, HTML, competitor names, promotional words, fake claims, or words like Best, No.1, Free, Offer, Sale, Guaranteed, 100% Result.
+Item Highlights must be under 125 characters and include searchable feature/use-case keywords. Format: Second Keyword + product details + third keyword + Use.
+Create exactly 8 bullet points. Each bullet starts with a 2-5 word benefit label (shown in bold by the app). The WHOLE bullet (label + colon + text) must be 150-200 characters. Bullets must be SEO-friendly, mobile-friendly, benefit-driven and conversion-focused. They must cover, one each: main benefit, quality/material, compatibility, use/installation, problem solution, technical detail, care/safe use, package content.
+Product description: natural, premium, readable, keyword-rich, not keyword-stuffed. One clean paragraph-style text with NO visible internal headings. It must include product purpose, main use, quality/material, compatibility, easy use/care, package content, and customer benefit.
+Backend search terms: under 249 bytes, lowercase, separated by single spaces only, no commas, no competitor names, no ASINs, no promotional words, no false claims, no unnecessary repetition (do not repeat words already in the title).
+Never invent certifications, warranty, dimensions, test results, compatibility, package content or performance claims. Use only safe, supportable claims. If a detail is missing, leave it out instead of guessing.
+Follow Amazon A9/A10-style SEO: title for indexing and CTR, highlights for extra searchable keywords, bullets for conversion, description for long-tail keywords, backend terms for hidden keyword indexing.
+Before answering, count characters and fix any broken rule.
+Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
+{"title":"","titleWhy":"short explanation","highlights":"","bullets":[{"label":"2-5 word label","text":"explanation after the label"}],"description":"","backend":""}
+The "bullets" array must contain exactly 8 items. Do not put the colon inside "label".`;
+
+const $ = id => document.getElementById(id);
+const STOP = new Set(['for','and','with','the','of','to','in','a','an','&','or','on','by','at','-','|']);
+const WHY = {
+  title: ['Amazon search reads the title first, so the main keyword sits near the start.','65–75 characters stays readable on a phone, where long titles get cut off.','No repeated or promotional words, so the title stays clean and accurate.'],
+  highlights: ['Adds extra searchable keywords for features and uses that do not fit in the title.','Keeps the key points short so a shopper understands the product at a glance.'],
+  bullets: ['Shoppers skim bullets, so each one starts with a short benefit label.','The 8 bullets cover different buying questions: benefit, material, compatibility, use, problem solved, specs, care and package.','150–200 characters keeps every bullet readable on mobile and still keyword-rich.'],
+  description: ['Gives more room for long-tail keywords and a natural story about the product.','Answers questions the bullets could not, such as use, care and what is in the box.','Written naturally, not stuffed with keywords, so it reads well and builds trust.'],
+  backend: ['Hidden keywords help Amazon find the product for searches that are not in the visible text.','Words already in the title are not repeated, so every word adds a new search chance.','Kept under 249 bytes, lowercase, with single spaces and no commas.']
+};
+const whyBox = k => '<details class="whyx" open><summary>Why this works</summary><ul>' + WHY[k].map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></details>';
+const BANNED = /\b(best|no\.?\s?1|number one|free|offer|sale|guarantee[ds]?|100%|discount|cheap|top rated|#1|amazon'?s choice)\b/i;
+const EMOJI = /\p{Extended_Pictographic}/u;
+let imgBlob = null, current = null, busy = false;
+
+$('drop').onclick = () => $('file').click();
+$('file').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const bmp = await createImageBitmap(f);
+    const s = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    imgBlob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+    $('drop').innerHTML = '<img alt="Product preview" src="' + c.toDataURL('image/jpeg', 0.6) + '"><div>Click to replace image</div>';
+  } catch (err) { $('dropTxt').textContent = 'Could not read that image. Try another file.'; imgBlob = null; }
+};
+
+function details() {
+  const g = id => $(id).value.trim() || 'Not provided';
+  return `PRODUCT DETAILS:
+Brand Name: ${g('brand')}
+Product Name: ${g('pname')}
+Model Name: ${g('model')}
+How It Works: ${g('how')}
+Special Feature: ${g('special')}
+Technical Details: ${g('tech')}
+Product Feature: ${g('feat')}
+Main Use: ${g('use')}
+Package Contains: ${g('pack')}
+Warranty / Support: ${g('warr')}
+KEYWORDS (first = primary):
+${g('kw')}`;
+}
+const kwList = () => $('kw').value.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+
+function parseJSON(t) {
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b < 0) throw new Error('The AI did not return a listing. Please try again.');
+  return JSON.parse(t.slice(a, b + 1));
+}
+
+function msg(cls, text) { $('result').innerHTML = '<div class="msg ' + cls + '">' + text + '</div>'; }
+
+const WORKER_URL = 'https://cool-forest-246camazonlistingai.akayaislive.workers.dev'; // paste your Cloudflare Worker URL here
+const toDataURL = b => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(b); });
+
+async function post(prompt, withImg) {
+  const body = {prompt};
+  if (withImg && imgBlob) body.image = await toDataURL(imgBlob);
+  const res = await fetch(WORKER_URL, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  let j = null; try { j = await res.json(); } catch (e) {}
+  if (!res.ok || !j || j.error) throw new Error((j && j.error) || ('Server error ' + res.status));
+  return {d: parseJSON(j.text), note: j.note || ''};
+}
+
+function normBackend(d) {
+  const inTitle = new Set((d.title || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+  const seen = new Set(); let s = '';
+  for (const w of (d.backend || '').toLowerCase().replace(/,/g, ' ').split(/\s+/)) {
+    if (!w || seen.has(w) || inTitle.has(w)) continue;
+    seen.add(w);
+    const t = s ? s + ' ' + w : w;
+    if (bytes(t) > 248) break;
+    s = t;
+  }
+  d.backend = s;
+}
+
+function detailIssues(d) {
+  const L = [], t = d.title || '', h = d.highlights || '', bl = Array.isArray(d.bullets) ? d.bullets : [];
+  const rng = (name, txt, lo, hi) => {
+    const n = len(txt), mid = Math.round((lo + hi) / 2);
+    if (n < lo) L.push(name + ' is ' + n + ' characters, too short. Add at least ' + (lo - n) + ' characters (aim for about ' + mid + '). Current text: ' + txt);
+    else if (n > hi) L.push(name + ' is ' + n + ' characters, too long. Remove at least ' + (n - hi) + ' characters (aim for about ' + mid + '). Current text: ' + txt);
+  };
+  rng('Title', t, 65, 75);
+  if (!h || len(h) >= 125) L.push('Highlights is ' + len(h) + ' characters; it must be under 125 (aim for about 110). Current text: ' + h);
+  if (bl.length !== 8) L.push('There are ' + bl.length + ' bullets; there must be exactly 8.');
+  bl.forEach((b, i) => rng('Bullet ' + (i + 1) + ' (label + colon + text)', bulletFull(b), 150, 200));
+  const pk = (kwList()[0] || '').trim();
+  if (pk) { const i = t.toLowerCase().indexOf(pk.toLowerCase()); if (i < 0 || i > 40) L.push('Title must contain the exact phrase "' + pk + '" within its first 40 characters. Current title: ' + t); }
+  checks(d).filter(x => x.s === 'Fail' && !/^(Title length|Primary|Highlights|Exactly 8|Bullets 150|Backend)/.test(x.c)).forEach(x => L.push(x.c + ': ' + x.n));
+  if (!d.backend) L.push('Backend search terms are empty. Write lowercase terms separated by single spaces, under 249 bytes, no commas.');
+  return L;
+}
+
+const titleCase = x => x.replace(/\b[a-z]/g, c => c.toUpperCase());
+function polish(d) {
+  const pk = (kwList()[0] || '').trim();
+  let t = (d.title || '').trim();
+  if (pk) {
+    const i = t.toLowerCase().indexOf(pk.toLowerCase());
+    if (i < 0 || i > 40) {
+      const pw = new Set(pk.toLowerCase().split(/\s+/));
+      const rest = t.split(/\s+/).filter(w => !pw.has(w.toLowerCase().replace(/[^a-z0-9]/g, ''))).join(' ');
+      t = titleCase(pk) + ' ' + rest;
+    }
+  }
+  if (len(t) > 75) {
+    const w = t.split(/\s+/);
+    while (w.length > 1 && len(w.join(' ')) > 75) w.pop();
+    while (w.length > 1 && STOP.has(w[w.length - 1].toLowerCase())) w.pop();
+    t = w.join(' ');
+  }
+  d.title = t.replace(/[,\s]+$/, '');
+  (d.bullets || []).forEach(b => {
+    const room = 199 - (len(b.label) + 2);
+    if (len(b.text) > room && room > 40) {
+      let tx = [...b.text].slice(0, room).join('');
+      tx = tx.slice(0, Math.max(tx.lastIndexOf(' '), 1)).replace(/[\s,;:\-–—]+$/, '') + '.';
+      b.text = tx;
+    }
+  });
+  normBackend(d);
+}
+
+let repairErr = '';
+async function repair() {
+  repairErr = '';
+  for (let i = 1; i <= 5; i++) {
+    normBackend(current);
+    const issues = detailIssues(current);
+    if (!issues.length) return;
+    msg('warn', 'Fixing ' + issues.length + ' rule issue' + (issues.length > 1 ? 's' : '') + ' automatically (attempt ' + i + ' of 5)…');
+    const p = RULES + '\n\n' + details() + '\n\nHere is the current draft:\n' + JSON.stringify(current) +
+      '\n\nThese rules are broken:\n- ' + issues.join('\n- ') +
+      '\n\nFix the broken items and keep everything else unchanged. Count characters exactly, including spaces, and for bullets include the label and colon. Aim for the middle of each range. Return the same JSON shape only.';
+    try { current = (await post(p, false)).d; } catch (e) { repairErr = e && e.message ? e.message : 'unknown error'; break; }
+  }
+  polish(current);
+}
+function showRepairErr() {
+  if (repairErr && detailIssues(current).length) $('result').insertAdjacentHTML('afterbegin', '<div class="msg warn">Automatic fixing stopped: ' + esc(repairErr) + '</div>');
+}
+
+function lock(on) { busy = on; $('go').disabled = on; }
+
+async function run(prompt) {
+  if (busy) return;
+  if (WORKER_URL.includes('YOUR-WORKER')) { msg('bad', 'Set WORKER_URL in index.html first (see setup steps).'); return; }
+  lock(true);
+  msg('warn', 'Writing your listing… this can take up to a minute.');
+  try {
+    const r = await post(prompt, true);
+    current = r.d;
+    await repair();
+    render();
+    showRepairErr();
+    if (r.note) $('result').insertAdjacentHTML('afterbegin', '<div class="msg warn">' + esc(r.note) + '</div>');
+  } catch (e) {
+    msg('bad', 'Something went wrong: ' + esc(e && e.message ? e.message : 'please try again'));
+  } finally { lock(false); }
+}
+
+async function manualFix() {
+  if (busy) return;
+  lock(true);
+  try { await repair(); } catch (e) {} finally { render(); showRepairErr(); lock(false); }
+}
+
+$('go').onclick = () => {
+  if (!$('pname').value.trim() && !imgBlob) { msg('bad', 'Add a product name or a product image first.'); return; }
+  run(RULES + '\n\n' + details() + (imgBlob ? '\n\nA product image is attached. Use it only for visible facts.' : ''));
+};
+
+const len = s => [...(s || '')].length;
+const bytes = s => new TextEncoder().encode(s || '').length;
+const bulletFull = b => b.label + ': ' + b.text;
+
+function checks(d) {
+  const r = [], add = (c, ok, n, soft) => r.push({ c, s: ok ? 'Pass' : (soft ? 'Review' : 'Fail'), n });
+  const t = d.title || '', h = d.highlights || '', bl = Array.isArray(d.bullets) ? d.bullets : [], be = d.backend || '', de = d.description || '';
+  const all = [t, h, be, de, ...bl.map(bulletFull)].join(' ');
+  add('Title length 65–75', len(t) >= 65 && len(t) <= 75, len(t) + ' characters');
+  const pk = (kwList()[0] || '').toLowerCase();
+  const pos = pk ? t.toLowerCase().indexOf(pk) : -1;
+  add('Primary keyword near start', !pk || (pos >= 0 && pos <= 40), pk ? (pos < 0 ? 'Not found in title' : 'Found at position ' + (pos + 1)) : 'No keyword entered', !pk);
+  const wc = {}; t.toLowerCase().split(/[\s,\/]+/).filter(w => w && !STOP.has(w)).forEach(w => wc[w] = (wc[w] || 0) + 1);
+  const rep = Object.keys(wc).filter(w => wc[w] > 1);
+  add('No repeated words in title', !rep.length, rep.length ? 'Repeated: ' + rep.join(', ') : 'No repeats');
+  const bad = all.match(BANNED);
+  add('No promotional words', !bad, bad ? 'Found: ' + bad[0] : 'None found');
+  add('No emojis or HTML', !EMOJI.test(all) && !/<[^>]+>/.test(all), 'Scanned all sections');
+  add('Highlights under 125', len(h) > 0 && len(h) < 125, len(h) + ' characters');
+  add('Exactly 8 bullets', bl.length === 8, bl.length + ' bullets');
+  const lens = bl.map(b => len(bulletFull(b))), off = lens.map((n, i) => (n < 150 || n > 200) ? 'B' + (i + 1) + ' = ' + n : null).filter(Boolean);
+  add('Bullets 150–200 characters', bl.length > 0 && !off.length, off.length ? 'Out of range: ' + off.join(', ') : 'Range ' + Math.min(...lens) + '–' + Math.max(...lens));
+  const lab = bl.map((b, i) => { const n = (b.label || '').trim().split(/\s+/).length; return (n < 2 || n > 5) ? 'B' + (i + 1) : null; }).filter(Boolean);
+  add('Bullet labels are 2–5 words', !lab.length, lab.length ? 'Fix: ' + lab.join(', ') : 'All labels fit');
+  add('Backend under 249 bytes', bytes(be) > 0 && bytes(be) < 249, bytes(be) + ' bytes');
+  add('Backend: no commas, lowercase, single spaces', !/,/.test(be) && be === be.toLowerCase() && !/\s{2,}/.test(be) && !/\bb0[a-z0-9]{8}\b/i.test(be), 'Format check');
+  add('Description reads naturally', de.length >= 450 && !/^\s*[A-Z][^.\n]{0,40}:\s*$/m.test(de), len(de) + ' characters, no heading lines');
+  add('No invented claims or package items', false, 'Compare against your own input before publishing', true);
+  add('Amazon 2026 compliance', false, 'Final check in Seller Central is still recommended', true);
+  return r;
+}
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function badge(ok, text) { return '<span class="badge ' + (ok ? 'ok' : 'bad') + '">' + text + '</span>'; }
+function copyBtn(i) { return '<button class="sm" data-copy="' + i + '">Copy</button>'; }
+
+let copyStore = [];
+function render() {
+  const d = current; copyStore = [];
+  const reg = txt => { copyStore.push(txt); return copyStore.length - 1; };
+  const t = d.title || '', h = d.highlights || '', be = d.backend || '', de = d.description || '', bl = d.bullets || [];
+  const cr = checks(d), fails = cr.filter(x => x.s === 'Fail');
+  let o = '';
+  if (fails.length) o += '<div class="msg bad"><b>' + fails.length + ' rule check' + (fails.length > 1 ? 's' : '') + ' failed.</b> <button id="fix" style="margin-left:8px">Auto-fix with AI</button></div>';
+  else o += '<div class="msg ok"><b>All automatic checks passed.</b> Review the manual items at the bottom.</div>';
+  o += '<div class="card"><h2>1. Optimized product title ' + copyBtn(reg(t)) + '</h2><div class="out">' + esc(t) + '</div><div class="meta" style="margin-top:6px">' + badge(len(t) >= 65 && len(t) <= 75, len(t) + ' characters') + '</div><div class="why"><b>For this product:</b> ' + esc(d.titleWhy) + '</div>' + whyBox('title') + '</div>';
+  o += '<div class="card"><h2>2. Item highlights ' + copyBtn(reg(h)) + '</h2><div class="out">' + esc(h) + '</div><div style="margin-top:6px">' + badge(len(h) < 125 && len(h) > 0, len(h) + ' characters') + '</div>' + whyBox('highlights') + '</div>';
+  o += '<div class="card"><h2>3. Bullet points ' + copyBtn(reg(bl.map(bulletFull).join('\n'))) + '</h2>';
+  bl.forEach((b, i) => { const f = bulletFull(b), n = len(f); o += '<div class="bl"><b>' + esc(b.label) + ':</b> ' + esc(b.text) + '<div class="meta">' + badge(n >= 150 && n <= 200, n + ' characters') + copyBtn(reg(f)) + '</div></div>'; });
+  o += whyBox('bullets') + '</div>';
+  o += '<div class="card"><h2>4. Product description ' + copyBtn(reg(de)) + '</h2><div class="out">' + esc(de) + '</div>' + whyBox('description') + '</div>';
+  o += '<div class="card"><h2>5. Backend search terms ' + copyBtn(reg(be)) + '</h2><div class="out">' + esc(be) + '</div><div style="margin-top:6px">' + badge(bytes(be) < 249 && bytes(be) > 0, bytes(be) + ' bytes') + '</div>' + whyBox('backend') + '</div>';
+  o += '<div class="card"><h2>6. Compliance and SEO check</h2><div class="tw"><table><tr><th>Condition</th><th>Status</th><th>Notes</th></tr>' +
+    cr.map(x => '<tr><td>' + esc(x.c) + '</td><td>' + badge(x.s === 'Pass', x.s).replace(/bad">Review/, 'warn">Review') + '</td><td>' + esc(x.n) + '</td></tr>').join('') + '</table></div></div>';
+  o += '<div class="row"><button id="copyAll">Copy full listing</button></div>';
+  $('result').innerHTML = o;
+  $('result').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => doCopy(copyStore[+b.dataset.copy], b));
+  $('copyAll').onclick = e => doCopy('TITLE\n' + t + '\n\nITEM HIGHLIGHTS\n' + h + '\n\nBULLET POINTS\n' + bl.map(bulletFull).join('\n') + '\n\nDESCRIPTION\n' + de + '\n\nBACKEND SEARCH TERMS\n' + be, e.target);
+  const fx = $('fix'); if (fx) fx.onclick = manualFix;
+}
+
+async function doCopy(text, btn) {
+  const old = btn.textContent;
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (x) {} ta.remove(); }
+  btn.textContent = 'Copied'; setTimeout(() => btn.textContent = old, 1200);
+}
+</script>
+</body>
+</html>
