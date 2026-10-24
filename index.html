@@ -133,7 +133,7 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
 </div>
 <footer class="foot">
   <div class="dev">Developed by <strong>Ajay Kushwaha</strong></div>
-  <div><b>AKAYA AI</b> · Amazon listing assistant · Version 4 (auto rule-fix on)</div>
+  <div><b>AKAYA AI</b> · Amazon listing assistant · Version 5 · Gemini + smart option picking</div>
   <small>AKAYA AI is an independent tool and is not affiliated with Amazon. Always review the content and your category rules in Seller Central before publishing.</small>
 </footer>
 <script>
@@ -150,10 +150,13 @@ Product description: natural, premium, readable, keyword-rich, not keyword-stuff
 Backend search terms: under 249 bytes, lowercase, separated by single spaces only, no commas, no competitor names, no ASINs, no promotional words, no false claims, no unnecessary repetition (do not repeat words already in the title).
 Never invent certifications, warranty, dimensions, test results, compatibility, package content or performance claims. Use only safe, supportable claims. If a detail is missing, leave it out instead of guessing.
 Follow Amazon A9/A10-style SEO: title for indexing and CTR, highlights for extra searchable keywords, bullets for conversion, description for long-tail keywords, backend terms for hidden keyword indexing.
-Before answering, count characters and fix any broken rule.
-Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
+Before answering, count characters and fix any broken rule.`;
+const SHAPE_ONE = `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
 {"title":"","titleWhy":"short explanation","highlights":"","bullets":[{"label":"2-5 word label","text":"explanation after the label"}],"description":"","backend":""}
 The "bullets" array must contain exactly 8 items. Do not put the colon inside "label".`;
+const SHAPE_MANY = `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
+{"titles":["title option 1","title option 2","title option 3","title option 4","title option 5"],"titleWhy":"short explanation for this product","highlights":["option 1","option 2","option 3"],"bullets":[{"options":[{"label":"2-5 word label","text":"text after the label"}]}],"description":"","backend":""}
+How to fill it: write 5 different titles, each 65-75 characters, each containing the exact primary keyword within its first 40 characters, with different lengths inside that range. Write 3 item-highlight options, each under 125 characters. The "bullets" array must hold exactly 8 items in this order: main benefit, quality/material, compatibility, use/installation, problem solution, technical detail, care/safe use, package content. Each item has exactly 3 options for that same topic. Each option must be 150-200 characters in total (label + colon + space + text), and the 3 options must have different lengths. Do not put the colon inside "label". The app will pick the options that pass its checks.`;
 
 const $ = id => document.getElementById(id);
 const STOP = new Set(['for','and','with','the','of','to','in','a','an','&','or','on','by','at','-','|']);
@@ -218,6 +221,35 @@ async function post(prompt, withImg) {
   let j = null; try { j = await res.json(); } catch (e) {}
   if (!res.ok || !j || j.error) throw new Error((j && j.error) || ('Server error ' + res.status));
   return {d: parseJSON(j.text), note: j.note || ''};
+}
+
+function dist(n, lo, hi) { return n < lo ? lo - n : n > hi ? n - hi : 0; }
+function titlePen(t) {
+  let p = dist(len(t), 65, 75) * 3;
+  const pk = (kwList()[0] || '').toLowerCase();
+  if (pk) { const i = t.toLowerCase().indexOf(pk); if (i < 0 || i > 40) p += 40; }
+  const wc = {}; t.toLowerCase().split(/[\s,\/]+/).filter(w => w && !STOP.has(w)).forEach(w => wc[w] = (wc[w] || 0) + 1);
+  p += Object.values(wc).filter(c => c > 1).length * 15;
+  if (BANNED.test(t) || EMOJI.test(t)) p += 50;
+  return p;
+}
+function highPen(h) { let p = len(h) >= 125 ? (len(h) - 124) * 3 : (124 - len(h)) * 0.1; if (!h) p += 100; if (BANNED.test(h) || EMOJI.test(h)) p += 50; return p; }
+function bulletPen(b) {
+  const f = bulletFull(b); let p = dist(len(f), 150, 200) * 3;
+  const n = (b.label || '').trim().split(/\s+/).length; if (n < 2 || n > 5) p += 20;
+  if (BANNED.test(f) || EMOJI.test(f)) p += 50;
+  return p;
+}
+const best = (arr, pen) => arr.map(x => [pen(x), x]).sort((a, b) => a[0] - b[0])[0][1];
+function pickDraft(d) {
+  if (!d || !Array.isArray(d.titles)) return d;
+  const strs = v => (Array.isArray(v) ? v : [v]).filter(x => typeof x === 'string' && x.trim()).map(x => x.trim());
+  const ti = strs(d.titles), hi = strs(d.highlights);
+  const bl = (d.bullets || []).map(b => {
+    const o = (b.options || b.variants || (b.label ? [b] : [])).filter(x => x && x.label && x.text).map(x => ({label: String(x.label).replace(/:+\s*$/, '').trim(), text: String(x.text).trim()}));
+    return o.length ? best(o, bulletPen) : {label: 'Product Benefit', text: ''};
+  });
+  return {title: ti.length ? best(ti, titlePen) : '', titleWhy: d.titleWhy || '', highlights: hi.length ? best(hi, highPen) : '', bullets: bl, description: d.description || '', backend: d.backend || ''};
 }
 
 function normBackend(d) {
@@ -289,10 +321,10 @@ async function repair() {
     const issues = detailIssues(current);
     if (!issues.length) return;
     msg('warn', 'Fixing ' + issues.length + ' rule issue' + (issues.length > 1 ? 's' : '') + ' automatically (attempt ' + i + ' of 5)…');
-    const p = RULES + '\n\n' + details() + '\n\nHere is the current draft:\n' + JSON.stringify(current) +
+    const p = RULES + '\n' + SHAPE_ONE + '\n\n' + details() + '\n\nHere is the current draft:\n' + JSON.stringify(current) +
       '\n\nThese rules are broken:\n- ' + issues.join('\n- ') +
       '\n\nFix the broken items and keep everything else unchanged. Count characters exactly, including spaces, and for bullets include the label and colon. Aim for the middle of each range. Return the same JSON shape only.';
-    try { current = (await post(p, false)).d; } catch (e) { repairErr = e && e.message ? e.message : 'unknown error'; break; }
+    try { current = pickDraft((await post(p, false)).d); } catch (e) { repairErr = e && e.message ? e.message : 'unknown error'; break; }
   }
   polish(current);
 }
@@ -309,7 +341,7 @@ async function run(prompt) {
   msg('warn', 'Writing your listing… this can take up to a minute.');
   try {
     const r = await post(prompt, true);
-    current = r.d;
+    current = pickDraft(r.d);
     await repair();
     render();
     showRepairErr();
@@ -327,7 +359,7 @@ async function manualFix() {
 
 $('go').onclick = () => {
   if (!$('pname').value.trim() && !imgBlob) { msg('bad', 'Add a product name or a product image first.'); return; }
-  run(RULES + '\n\n' + details() + (imgBlob ? '\n\nA product image is attached. Use it only for visible facts.' : ''));
+  run(RULES + '\n' + SHAPE_MANY + '\n\n' + details() + (imgBlob ? '\n\nA product image is attached. Use it only for visible facts.' : ''));
 };
 
 const len = s => [...(s || '')].length;
