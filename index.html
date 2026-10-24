@@ -133,37 +133,39 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
 </div>
 <footer class="foot">
   <div class="dev">Developed by <strong>Ajay Kushwaha</strong></div>
-  <div><b>AKAYA AI</b> · Amazon listing assistant · Version 6 · readable titles (60–75)</div>
+  <div><b>AKAYA AI</b> · Amazon listing assistant · Version 7 · your rules + expert role</div>
   <small>AKAYA AI is an independent tool and is not affiliated with Amazon. Always review the content and your category rules in Seller Central before publishing.</small>
 </footer>
 <script>
-const RULES = `You are an Amazon SEO Listing Expert. Create a 2026 Amazon-compliant, SEO-optimized listing using only the product details, product image and keywords given.
+const RULES = `You are an Amazon SEO Listing Expert and you have 8 years of experience. Create a 2026 Amazon-compliant, SEO-optimized listing using only the product details, product image and keywords given below.
+These rules are strict. Every rule must be followed exactly.
 Rules:
 Title must be 60-75 characters (count every character incl. spaces). It must NEVER be longer than 75 characters.
-Title format: Product/Product Type + Main Keyword + Size/Spec + Material/Compatibility + benefit.
-Put the primary keyword phrase (the first keyword given) once, near the start of the title, within its first 45 characters.
-Title quality: write it like a clear product name a shopper can read, not a keyword list. Next to the primary keyword, use the real product details from the input (product type, size or capacity, material, key feature, compatibility, main use). Never repeat any word in the title (plural, capital letters or a different position still count as repeated). Do not stack synonyms or keyword variants. Put extra keywords in the highlights, bullets, description and backend terms instead.
-Do not repeat words unnecessarily. Do not add pack count in title unless clearly required.
+Title format: Brand Name + Product/Product Type + Main Keyword + Size/Spec + Material/Compatibility + benefit.
+Put the primary keyword (the first keyword given) naturally near the beginning of the title, within its first 50 characters, once only. Maintain readability: write a clear product name a shopper can read, not a keyword list, using the real product details given (type, size or capacity, material, key feature, compatibility, main use).
+Do not repeat words unnecessarily. In the title never repeat any word (plural, capital letters or a different position still count as repeated). Do not stack synonyms or keyword variants; put extra keywords in the highlights, bullets, description and backend terms instead.
+Do not add pack count in title unless clearly required.
 No emojis, HTML, competitor names, promotional words, fake claims, or words like Best, No.1, Free, Offer, Sale, Guaranteed, 100% Result.
-Item Highlights must be under 125 characters and include searchable feature/use-case keywords. Format: Second Keyword + product details + third keyword + Use.
+Item Highlights must be minimum 100 characters and maximum 125 characters and include searchable feature/use-case keywords. Highlights format: Second Keyword + product details + third keyword + Use.
 Create exactly 8 bullet points. Each bullet starts with a 2-5 word benefit label (shown in bold by the app). The WHOLE bullet (label + colon + text) must be 150-200 characters. Bullets must be SEO-friendly, mobile-friendly, benefit-driven and conversion-focused. They must cover, one each: main benefit, quality/material, compatibility, use/installation, problem solution, technical detail, care/safe use, package content.
 Product description: natural, premium, readable, keyword-rich, not keyword-stuffed. One clean paragraph-style text with NO visible internal headings. It must include product purpose, main use, quality/material, compatibility, easy use/care, package content, and customer benefit.
-Backend search terms: under 249 bytes, lowercase, separated by single spaces only, no commas, no competitor names, no ASINs, no promotional words, no false claims, no unnecessary repetition (do not repeat words already in the title).
-Never invent certifications, warranty, dimensions, test results, compatibility, package content or performance claims. Use only safe, supportable claims. If a detail is missing, leave it out instead of guessing.
+Backend search terms: under 249 characters (and under 249 bytes), lowercase, separated by single spaces only, no commas, no competitor names, no ASINs, no promotional words, no false claims, no unnecessary repetition (do not repeat words already in the title).
+Do not invent certifications, warranty, dimensions, test results, compatibility, package content or performance claims. Use only safe, supportable claims. If a detail says Not provided, leave it out and never write the words Not provided in the listing.
 Follow Amazon A9/A10-style SEO: title for indexing and CTR, highlights for extra searchable keywords, bullets for conversion, description for long-tail keywords, backend terms for hidden keyword indexing.
 Before answering, count characters and fix any broken rule.`;
+
 const SHAPE_ONE = `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
 {"title":"","titleWhy":"short explanation","highlights":"","bullets":[{"label":"2-5 word label","text":"explanation after the label"}],"description":"","backend":""}
 The "bullets" array must contain exactly 8 items. Do not put the colon inside "label".`;
 const SHAPE_MANY = `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
 {"titles":["title option 1","title option 2","title option 3","title option 4","title option 5"],"titleWhy":"short explanation for this product","highlights":["option 1","option 2","option 3"],"bullets":[{"options":[{"label":"2-5 word label","text":"text after the label"}]}],"description":"","backend":""}
-How to fill it: write 5 different titles, each 60-75 characters (never above 75), each with the primary keyword phrase once within its first 45 characters followed by real product details (type, size, material, feature, use), no repeated word, and a different structure and length for each title. Write 3 item-highlight options, each under 125 characters. The "bullets" array must hold exactly 8 items in this order: main benefit, quality/material, compatibility, use/installation, problem solution, technical detail, care/safe use, package content. Each item has exactly 3 options for that same topic. Each option must be 150-200 characters in total (label + colon + space + text), and the 3 options must have different lengths. Do not put the colon inside "label". The app will pick the options that pass its checks.`;
+How to fill it: write 5 different titles, each 60-75 characters (never above 75), each starting with the brand name (if one is given) and having the primary keyword phrase once within its first 50 characters, followed by real product details (type, size, material, feature, use), no repeated word, and a different structure and length for each title. Write 3 item-highlight options, each 100-125 characters, in the format Second Keyword + product details + third keyword + use. The "bullets" array must hold exactly 8 items in this order: main benefit, quality/material, compatibility, use/installation, problem solution, technical detail, care/safe use, package content. Each item has exactly 3 options for that same topic. Each option must be 150-200 characters in total (label + colon + space + text), and the 3 options must have different lengths. Do not put the colon inside "label". The app will pick the options that pass its checks.`;
 
 const $ = id => document.getElementById(id);
 const STOP = new Set(['for','and','with','the','of','to','in','a','an','&','or','on','by','at','-','|']);
 const WHY = {
   title: ['Amazon search reads the title first, so the main keyword sits near the start.','60–75 characters stays readable on a phone, where long titles get cut off.','Real product details instead of repeated keywords, so the title reads naturally and stays accurate.'],
-  highlights: ['Adds extra searchable keywords for features and uses that do not fit in the title.','Keeps the key points short so a shopper understands the product at a glance.'],
+  highlights: ['Adds extra searchable keywords for features and uses that do not fit in the title.','Kept between 100 and 125 characters so it is full of useful keywords but still quick to read.'],
   bullets: ['Shoppers skim bullets, so each one starts with a short benefit label.','The 8 bullets cover different buying questions: benefit, material, compatibility, use, problem solved, specs, care and package.','150–200 characters keeps every bullet readable on mobile and still keyword-rich.'],
   description: ['Gives more room for long-tail keywords and a natural story about the product.','Answers questions the bullets could not, such as use, care and what is in the box.','Written naturally, not stuffed with keywords, so it reads well and builds trust.'],
   backend: ['Hidden keywords help Amazon find the product for searches that are not in the visible text.','Words already in the title are not repeated, so every word adds a new search chance.','Kept under 249 bytes, lowercase, with single spaces and no commas.']
@@ -224,11 +226,13 @@ async function post(prompt, withImg) {
   return {d: parseJSON(j.text), note: j.note || ''};
 }
 
+const brandVal = () => { const b = ($('brand').value || '').trim(); return /^not provided$/i.test(b) ? '' : b; };
+function brandOk(t) { const b = brandVal(); return !b || t.toLowerCase().startsWith(b.toLowerCase()); }
 function kwOk(t, pk) {
   if (!pk) return true;
   const lt = t.toLowerCase(), p = pk.toLowerCase(), i = lt.indexOf(p);
-  if (i >= 0 && i <= 45) return true;
-  const head = lt.slice(0, Math.max(55, p.length + 10));
+  if (i >= 0 && i <= 50) return true;
+  const head = lt.slice(0, Math.max(60, p.length + 10));
   const ws = p.split(/\s+/).filter(w => w && !STOP.has(w));
   return ws.length > 0 && ws.every(w => new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(head));
 }
@@ -237,12 +241,13 @@ function titlePen(t) {
   let p = dist(len(t), 60, 75) * 3 + (len(t) > 75 ? 200 : 0);
   const pk = (kwList()[0] || '').toLowerCase();
   if (pk && !kwOk(t, pk)) p += 40;
+  if (!brandOk(t)) p += 30;
   const wc = {}; t.toLowerCase().split(/[\s,\/]+/).filter(w => w && !STOP.has(w)).forEach(w => wc[w] = (wc[w] || 0) + 1);
   p += Object.values(wc).filter(c => c > 1).length * 30;
   if (BANNED.test(t) || EMOJI.test(t)) p += 50;
   return p;
 }
-function highPen(h) { let p = len(h) >= 125 ? (len(h) - 124) * 3 : (124 - len(h)) * 0.1; if (!h) p += 100; if (BANNED.test(h) || EMOJI.test(h)) p += 50; return p; }
+function highPen(h) { let p = dist(len(h), 100, 125) * 3 + Math.abs(112 - len(h)) * 0.05; if (!h) p += 100; if (BANNED.test(h) || EMOJI.test(h)) p += 50; return p; }
 function bulletPen(b) {
   const f = bulletFull(b); let p = dist(len(f), 150, 200) * 3;
   const n = (b.label || '').trim().split(/\s+/).length; if (n < 2 || n > 5) p += 20;
@@ -282,11 +287,11 @@ function detailIssues(d) {
     else if (n > hi) L.push(name + ' is ' + n + ' characters, too long. Remove at least ' + (n - hi) + ' characters (aim for about ' + mid + '). Current text: ' + txt);
   };
   rng('Title', t, 60, 75);
-  if (!h || len(h) >= 125) L.push('Highlights is ' + len(h) + ' characters; it must be under 125 (aim for about 110). Current text: ' + h);
+  if (!h) L.push('Item highlights are empty. Write 100-125 characters.'); else rng('Item highlights', h, 100, 125);
   if (bl.length !== 8) L.push('There are ' + bl.length + ' bullets; there must be exactly 8.');
   bl.forEach((b, i) => rng('Bullet ' + (i + 1) + ' (label + colon + text)', bulletFull(b), 150, 200));
   const pk = (kwList()[0] || '').trim();
-  if (pk && !kwOk(t, pk)) L.push('Title must contain the primary keyword "' + pk + '" (the exact phrase, or all of its words) within the first 55 characters, and every word must appear only once. Current title: ' + t);
+  if (pk && !kwOk(t, pk)) L.push('Title must contain the primary keyword "' + pk + '" (the exact phrase, or all of its words) within the first 60 characters, and every word must appear only once. Current title: ' + t);
   { const wc = {}; t.toLowerCase().split(/[\s,\/]+/).filter(w => w && !STOP.has(w)).forEach(w => wc[w] = (wc[w] || 0) + 1); const rp = Object.keys(wc).filter(w => wc[w] > 1);
     if (rp.length) L.push('Title repeats these words: ' + rp.join(', ') + '. Rewrite the title so every word appears only once and add real product details from the input (size, material, feature, use) so it reads naturally. It must be 60-75 characters. Current title: ' + t); }
   checks(d).filter(x => x.s === 'Fail' && !/^(Title length|Primary|No repeated words in title|Highlights|Exactly 8|Bullets 150|Backend)/.test(x.c)).forEach(x => L.push(x.c + ': ' + x.n));
@@ -381,6 +386,7 @@ function checks(d) {
   const all = [t, h, be, de, ...bl.map(bulletFull)].join(' ');
   add('Title length 60–75 (max 75)', len(t) >= 60 && len(t) <= 75, len(t) + ' characters');
   const pk = (kwList()[0] || '').toLowerCase();
+  add('Brand name at start of title', brandOk(t), brandVal() ? (brandOk(t) ? 'Title starts with the brand' : 'Title should start with ' + brandVal()) : 'No brand entered');
   add('Primary keyword near start', kwOk(t, pk), pk ? (kwOk(t, pk) ? 'Keyword found near the start' : 'Not found near the start') : 'No keyword entered', !pk);
   const wc = {}; t.toLowerCase().split(/[\s,\/]+/).filter(w => w && !STOP.has(w)).forEach(w => wc[w] = (wc[w] || 0) + 1);
   const rep = Object.keys(wc).filter(w => wc[w] > 1);
@@ -388,7 +394,7 @@ function checks(d) {
   const bad = all.match(BANNED);
   add('No promotional words', !bad, bad ? 'Found: ' + bad[0] : 'None found');
   add('No emojis or HTML', !EMOJI.test(all) && !/<[^>]+>/.test(all), 'Scanned all sections');
-  add('Highlights under 125', len(h) > 0 && len(h) < 125, len(h) + ' characters');
+  add('Highlights 100–125', len(h) >= 100 && len(h) <= 125, len(h) + ' characters');
   add('Exactly 8 bullets', bl.length === 8, bl.length + ' bullets');
   const lens = bl.map(b => len(bulletFull(b))), off = lens.map((n, i) => (n < 150 || n > 200) ? 'B' + (i + 1) + ' = ' + n : null).filter(Boolean);
   add('Bullets 150–200 characters', bl.length > 0 && !off.length, off.length ? 'Out of range: ' + off.join(', ') : 'Range ' + Math.min(...lens) + '–' + Math.max(...lens));
@@ -416,7 +422,7 @@ function render() {
   if (fails.length) o += '<div class="msg bad"><b>' + fails.length + ' rule check' + (fails.length > 1 ? 's' : '') + ' failed.</b> <button id="fix" style="margin-left:8px">Auto-fix with AI</button></div>';
   else o += '<div class="msg ok"><b>All automatic checks passed.</b> Review the manual items at the bottom.</div>';
   o += '<div class="card"><h2>1. Optimized product title ' + copyBtn(reg(t)) + '</h2><div class="out">' + esc(t) + '</div><div class="meta" style="margin-top:6px">' + badge(len(t) >= 60 && len(t) <= 75, len(t) + ' characters') + '</div><div class="why"><b>For this product:</b> ' + esc(d.titleWhy) + '</div>' + whyBox('title') + '</div>';
-  o += '<div class="card"><h2>2. Item highlights ' + copyBtn(reg(h)) + '</h2><div class="out">' + esc(h) + '</div><div style="margin-top:6px">' + badge(len(h) < 125 && len(h) > 0, len(h) + ' characters') + '</div>' + whyBox('highlights') + '</div>';
+  o += '<div class="card"><h2>2. Item highlights ' + copyBtn(reg(h)) + '</h2><div class="out">' + esc(h) + '</div><div style="margin-top:6px">' + badge(len(h) >= 100 && len(h) <= 125, len(h) + ' characters') + '</div>' + whyBox('highlights') + '</div>';
   o += '<div class="card"><h2>3. Bullet points ' + copyBtn(reg(bl.map(bulletFull).join('\n'))) + '</h2>';
   bl.forEach((b, i) => { const f = bulletFull(b), n = len(f); o += '<div class="bl"><b>' + esc(b.label) + ':</b> ' + esc(b.text) + '<div class="meta">' + badge(n >= 150 && n <= 200, n + ' characters') + copyBtn(reg(f)) + '</div></div>'; });
   o += whyBox('bullets') + '</div>';
