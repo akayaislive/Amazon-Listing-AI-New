@@ -133,54 +133,54 @@ th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertic
 </div>
 <footer class="foot">
   <div class="dev">Developed by <strong>Ajay Kushwaha</strong></div>
-  <div><b>AKAYA AI</b> · Amazon listing assistant · Version 8 · title format + product details check</div>
+  <div><b>AKAYA AI</b> · Amazon listing assistant · Version 9 · all details + role first</div>
   <small>AKAYA AI is an independent tool and is not affiliated with Amazon. Always review the content and your category rules in Seller Central before publishing.</small>
 </footer>
 <script>
-const RULES = `You are an Amazon SEO Listing Expert and you have 8 years of experience. Create a 2026 Amazon-compliant, SEO-optimized listing using only the product details, product image and keywords given below.
-These rules are strict. Every rule must be followed exactly.
+const RULES = `You are an Amazon SEO Listing Expert. You have 8 years of market experience and you are an SEO optimization master. Create a 2026 Amazon-compliant, SEO-optimized listing using only the product details and keywords given below.
+These rules are strict. Follow every rule exactly.
 Rules:
 Title must be 60-75 characters (count every character incl. spaces). It must NEVER be longer than 75 characters.
-Title format: Brand Name + Product/Product Type + Main Keyword + Size/Spec + Material/Compatibility + benefit.
-Put the primary keyword (the first keyword given) naturally near the beginning of the title, within its first 50 characters, once only. Maintain readability: write a clear product name a shopper can read, not a keyword list, using the real product details given (type, size or capacity, material, key feature, compatibility, main use).
-Do not repeat words unnecessarily. In the title never repeat any word (plural, capital letters or a different position still count as repeated). Do not stack synonyms or keyword variants; put extra keywords in the highlights, bullets, description and backend terms instead.
-Do not add pack count in title unless clearly required.
+Title format: Brand Name + Product Name + Main Keyword + Product Spec + Pack Details (what comes in the pack). Every word starts with a capital letter.
+Put the primary keyword (the first keyword given) naturally near the beginning of the title. Maintain readability: the title must read like a clear product name, not a keyword list. Pack details in the title come only from Package Contains.
+Do not repeat words unnecessarily. In the title never repeat any word (plural, capital letters or a different position still count as repeated). Do not stack synonyms or keyword variants; put extra keywords in the highlights, bullets, description and backend terms.
 No emojis, HTML, competitor names, promotional words, fake claims, or words like Best, No.1, Free, Offer, Sale, Guaranteed, 100% Result.
 Item Highlights must be minimum 100 characters and maximum 125 characters and include searchable feature/use-case keywords. Highlights format: Second Keyword + product details + third keyword + Use.
 Create exactly 8 bullet points. Each bullet starts with a 2-5 word benefit label (shown in bold by the app). The WHOLE bullet (label + colon + text) must be 150-200 characters. Bullets must be SEO-friendly, mobile-friendly, benefit-driven and conversion-focused. They must cover, one each: main benefit, quality/material, compatibility, use/installation, problem solution, technical detail, care/safe use, package content.
 Product description: natural, premium, readable, keyword-rich, not keyword-stuffed. One clean paragraph-style text with NO visible internal headings. It must include product purpose, main use, quality/material, compatibility, easy use/care, package content, and customer benefit.
 Backend search terms: under 249 characters (and under 249 bytes), lowercase, separated by single spaces only, no commas, no competitor names, no ASINs, no promotional words, no false claims, no unnecessary repetition (do not repeat words already in the title).
+Use EVERY product detail given (Product Name, Model Name, How It Works, Special Feature, Technical Details, Product Feature, Main Use, Package Contains, Warranty / Support) and EVERY keyword. Spread them over the title, highlights, bullets, description and backend terms. Do not leave any detail out. Use Warranty / Support exactly as given, in the description.
 Do not invent certifications, warranty, dimensions, test results, compatibility, package content or performance claims. Use only safe, supportable claims. If a detail says Not provided, leave it out and never write the words Not provided in the listing.
 Follow Amazon A9/A10-style SEO: title for indexing and CTR, highlights for extra searchable keywords, bullets for conversion, description for long-tail keywords, backend terms for hidden keyword indexing.
 Before answering, count characters and fix any broken rule.`;
-
 const SHAPE_FIX = `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
 {"bullets":[{"label":"2-5 word label","text":"explanation after the label"}],"description":"","backend":""}
 The "bullets" array must contain exactly 8 items. Do not put the colon inside "label".`;
 const SHAPE_PARTS = `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
-{"titleParts":{"productType":["..."],"spec":["..."],"material":["..."],"benefit":["..."]},"highlightParts":{"details":["..."],"use":["..."]}}
-Write 4 new options for every key. Every phrase is 2-5 words taken from the product details, with different lengths, and never repeats a word from the brand, the main keyword or another phrase. For productType use "" as one option if the main keyword already names the product type.`;
+{"titleParts":{"name":["..."],"spec":["..."],"pack":["..."],"extra":["..."]},"highlightParts":{"details":["..."],"use":["..."]}}
+Write 4 new options for every key. Every phrase is 2-5 words taken from the product details, with different lengths, and never repeats a word from the brand, the product name, the main keyword or another phrase.`;
+const kwExtra = (brand, name, kw) => { const have = new Set((brand + ' ' + name).split(/\s+/).map(nrm).filter(Boolean)); return kw.split(/\s+/).filter(w => w && !have.has(nrm(w))).join(' '); };
 function budgetText() {
-  const brand = brandVal(), k = kwList(), kw = titleCase(k[0] || '');
-  const pre = [brand, kw].filter(Boolean).join(' ');
-  const tLo = Math.max(10, 60 - pre.length - 1), tHi = Math.max(tLo + 5, 75 - pre.length - 1);
+  const brand = brandVal(), k = kwList(), pn = pnameVal();
+  const pre = titleCase([brand, pn, kwExtra(brand, pn, k[0] || '')].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim());
+  const tLo = Math.max(8, 60 - pre.length - 1), tHi = Math.max(tLo + 4, 75 - pre.length - 1);
   const fx = [k[1], k[2]].filter(Boolean).join(' ');
   const hLo = Math.max(20, 100 - fx.length - 2), hHi = Math.max(hLo + 5, 125 - fx.length - 2);
-  return 'Title budget: the app writes "' + pre + '" (' + pre.length + ' characters) first. All the title phrases you write (productType, spec, material, benefit), joined with single spaces, should add about ' + tLo + ' to ' + tHi + ' characters, so the whole title is 60-75 characters. Write phrases of different lengths (some short, some longer) so the app can find a fitting mix.\nHighlights budget: the app adds ' + (fx ? '"' + fx + '"' : 'no keywords') + '. The details and use phrases together should add about ' + hLo + ' to ' + hHi + ' characters so the highlights are 100-125 characters.';
+  return 'Title budget: the app starts the title with "' + pre + '" (' + pre.length + ' characters). The phrases you write (spec, pack, and optional extra), joined with single spaces, should add about ' + tLo + ' to ' + tHi + ' characters, so the whole title is 60-75 characters. Write phrases of different lengths (some short, some longer) so the app can find a fitting mix.' + (pre.length > 55 ? ' The product name is long, so also write 2-3 shorter versions of it under "name".' : '') + '\nHighlights budget: the app adds ' + (fx ? '"' + fx + '"' : 'no keywords') + '. The details and use phrases together should add about ' + hLo + ' to ' + hHi + ' characters so the highlights are 100-125 characters.';
 }
 function shapeMany() {
   return `Return ONLY valid JSON (no markdown fences, no commentary) with this exact shape:
-{"titleParts":{"productType":["..."],"spec":["..."],"material":["..."],"benefit":["..."]},"titleWhy":"short explanation for this product","highlightParts":{"details":["..."],"use":["..."]},"bullets":[{"options":[{"label":"2-5 word label","text":"text after the label"}]}],"description":"","backend":""}
-How the app builds the title: Brand Name + Product Type + Main Keyword + Size/Spec + Material/Compatibility + benefit, joined with spaces, every word starting with a capital letter. The app adds the brand name and the main keyword itself, so you write only these phrases (3-4 options each, 2-5 words each, with different lengths):
-- productType: the product type name; use "" as one option if the main keyword already names the product type.
-- spec: size or specification taken from Technical Details.
-- material: material or compatibility taken from Technical Details or Product Feature.
-- benefit: a short benefit taken from Product Feature, Special Feature or Main Use.
-A phrase must never repeat a word that is in the brand, the main keyword or another phrase, and must not contain promotional words.
+{"titleParts":{"name":["..."],"spec":["..."],"pack":["..."],"extra":["..."]},"titleWhy":"short explanation for this product","highlightParts":{"details":["..."],"use":["..."]},"bullets":[{"options":[{"label":"2-5 word label","text":"text after the label"}]}],"description":"","backend":""}
+How the app builds the title: Brand Name + Product Name + Main Keyword + Product Spec + Pack Details, joined with spaces, every word starting with a capital letter. The app adds the brand name, the product name and the main keyword itself. You write only these phrases (3-4 options each, 2-5 words each, different lengths):
+- name: shorter versions of the Product Name that keep its main words (only needed if the full name is long; otherwise give an empty list).
+- spec: the size or specification taken from Technical Details (only facts that are given).
+- pack: what comes in the pack, taken from Package Contains, for example "Pack of 1" or "With Hose and Wall Holder" (only items that are listed).
+- extra: an optional short material or benefit phrase taken from Product Feature.
+A phrase must never repeat a word that is in the brand, the product name, the main keyword or another phrase, and must not contain promotional words.
 How the app builds the item highlights: Second Keyword + product details + Third Keyword + Use. The app adds the keywords itself, so you write: details (3-4 options: facts from the product details) and use (3-4 options: the main use, for example "for bathroom cleaning").
 ${budgetText()}
 Bullets: exactly 8 items in this order: 1 main benefit, 2 quality/material, 3 compatibility, 4 use/installation, 5 problem solution, 6 technical detail, 7 care/safe use, 8 package content. Each item has 4 options for that topic. Every option must be 150-200 characters in total (label + colon + space + text), with different lengths, and must contain at least one specific fact (a number, size, material, feature or package item) copied from the product details for that topic: 1 from Product Feature or Special Feature; 2 from Technical Details or Product Feature; 3 from Technical Details, Model Name or Product Name; 4 from Main Use or How It Works; 5 from Main Use or Product Feature; 6 from Technical Details; 7 from Product Feature or Technical Details; 8 from Package Contains. Do not put the colon inside "label".
-The description must also use many specific facts from the product details (numbers, materials, features, use, package contents). Never write generic text that could fit any product. The app picks the options that pass its checks.`;
+The description has no length limit. It must use EVERY detail from the list above (Model Name, How It Works, Special Feature, Technical Details, Product Feature, Main Use, Package Contains and Warranty / Support exactly as given) and as many keywords as read naturally. Never write generic text that could fit any product. The app picks the options that pass its checks.`;
 }
 const $ = id => document.getElementById(id);
 const STOP = new Set(['for','and','with','the','of','to','in','a','an','&','or','on','by','at','-','|']);
@@ -257,6 +257,8 @@ function kwOk(t, pk) {
   const ws = p.split(/\s+/).filter(w => w && !STOP.has(w));
   return ws.length > 0 && ws.every(w => new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(head));
 }
+const pnameVal = () => { const b = ($('pname').value || '').trim(); return /^not provided$/i.test(b) ? '' : b; };
+const nrm = w => w.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/(.{3,})s$/, '$1');
 const cap1 = x => x.charAt(0).toUpperCase() + x.slice(1);
 const titleCase = x => x.replace(/(^|[\s\-\/(])([a-z])/g, (m, a, b) => a + b.toUpperCase());
 const strs = v => (Array.isArray(v) ? v : [v]).filter(x => typeof x === 'string').map(x => x.trim().replace(/\s+/g, ' ')).filter(Boolean);
@@ -264,6 +266,8 @@ const uniq = a => [...new Set(a)];
 const TSTOP = new Set(['the','and','for','with','are','you','your','this','that','from','not','provided','will','can','all','use','used','using','any','has','have','its','set','also','more','than','into','out','per','via','one','two']);
 const toks = s => uniq((String(s || '').toLowerCase().match(/[a-z0-9][a-z0-9.]*/g) || []).map(w => w.replace(/\.+$/, '').replace(/(.{3,})s$/, '$1')).filter(w => (w.length >= 3 || /\d/.test(w)) && !TSTOP.has(w)));
 const FIELD = id => ($(id).value || '').trim();
+const DET_IDS = ['model', 'how', 'special', 'tech', 'feat', 'use', 'pack'];
+const DETAIL_FIELDS = [['model', 'Model Name'], ['how', 'How It Works'], ['special', 'Special Feature'], ['tech', 'Technical Details'], ['feat', 'Product Feature'], ['use', 'Main Use'], ['pack', 'Package Contains'], ['warr', 'Warranty / Support']];
 const ALL_IDS = ['pname', 'model', 'how', 'special', 'tech', 'feat', 'use', 'pack'];
 const BULLET_MAP = [['feat', 'special'], ['tech', 'feat'], ['tech', 'feat', 'pname', 'model'], ['use', 'how'], ['use', 'feat', 'how'], ['tech'], ['feat', 'tech', 'use'], ['pack']];
 const detailSet = (ids, skip) => { const s = new Set(toks(ids.map(FIELD).join(' '))); (skip || []).forEach(w => s.delete(w)); return s; };
@@ -277,19 +281,23 @@ function repeatedWords(t) {
 
 function buildTitle(tp) {
   tp = tp || {};
-  const brand = brandVal(), pk = kwList()[0] || '', kw = titleCase(pk);
+  const brand = brandVal(), pk = kwList()[0] || '', pn = pnameVal();
+  const names = uniq([pn, ...strs(tp.name).slice(0, 5)].filter(Boolean)); if (!names.length) names.push('');
   const o = k => uniq(['', ...strs(tp[k]).slice(0, 7)]);
-  const av = detailSet(ALL_IDS, toks(brand + ' ' + kw));
+  const av = detailSet(DET_IDS, toks(brand + ' ' + pn + ' ' + pk));
   let bestT = '', bestP = Infinity;
-  for (const pt of o('productType')) for (const sp of o('spec')) for (const ma of o('material')) for (const be of o('benefit')) {
-    const t = titleCase([brand, pt, kw, sp, ma, be].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim());
-    const n = len(t);
-    let p = dist(n, 60, 75) * 5 + (n > 75 ? 1000 : 0) + Math.abs(n - 68) * 0.2;
-    p += (4 - [pt, sp, ma, be].filter(Boolean).length) * 3;
-    p += repeatedWords(t).length * 60;
-    if (BANNED.test(t) || EMOJI.test(t)) p += 300;
-    if (av.size && !hitsIn(av, t)) p += 40;
-    if (p < bestP) { bestP = p; bestT = t; }
+  for (const nm of names) {
+    const kx = titleCase(kwExtra(brand, nm, pk));
+    for (const sp of o('spec')) for (const pa of o('pack')) for (const ex of o('extra')) {
+      const t = titleCase([brand, nm, kx, sp, pa, ex].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim());
+      const n = len(t);
+      let p = dist(n, 60, 75) * 5 + (n > 75 ? 1000 : 0) + Math.abs(n - 68) * 0.2;
+      p += (sp ? 0 : 8) + (pa ? 0 : 8) + (ex ? 6 : 0) + (nm !== pn ? 3 : 0);
+      p += repeatedWords(t).length * 60;
+      if (BANNED.test(t) || EMOJI.test(t)) p += 300;
+      if (av.size && !hitsIn(av, t)) p += 40;
+      if (p < bestP) { bestP = p; bestT = t; }
+    }
   }
   return bestT;
 }
@@ -297,7 +305,7 @@ function buildHighlights(hp) {
   hp = hp || {};
   const k = kwList(), k2 = k[1] || '', k3 = k[2] || '';
   const o = key => uniq(['', ...strs(hp[key]).slice(0, 7)]);
-  const av = detailSet(ALL_IDS, toks(k2 + ' ' + k3));
+  const av = detailSet(DET_IDS, toks(k2 + ' ' + k3));
   let bestH = '', bestP = Infinity;
   for (const dt of o('details')) for (const us of o('use')) {
     const h = titleCase([k2, dt, k3, us].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim());
@@ -340,12 +348,33 @@ function normBackend(d) {
     if (bytes(t) > 248) break;
     s = t;
   }
+  const have = new Set(toks([d.title, d.highlights, ...(d.bullets || []).map(bulletFull), d.description, s].join(' ')));
+  kwList().forEach(k => k.toLowerCase().replace(/,/g, ' ').split(/\s+/).forEach(w => {
+    if (!w || toks(w).every(x => have.has(x)) || seen.has(w) || inTitle.has(w)) return;
+    const t = s ? s + ' ' + w : w;
+    if (bytes(t) <= 248) { s = t; seen.add(w); }
+  }));
   d.backend = s;
 }
 
+function coverage(d) {
+  const text = [d.title, d.highlights, ...(d.bullets || []).map(bulletFull), d.description].join(' ');
+  const have = new Set(toks(text));
+  return DETAIL_FIELDS.map(([id, name]) => {
+    const t = toks(FIELD(id)); if (!t.length) return null;
+    const miss = t.filter(w => !have.has(w)), frac = (t.length - miss.length) / t.length;
+    return {id, name, miss, frac, ok: frac >= 0.6};
+  }).filter(Boolean);
+}
+function missingKeywords(d) {
+  const have = new Set(toks([d.title, d.highlights, ...(d.bullets || []).map(bulletFull), d.description, d.backend].join(' ')));
+  return kwList().filter(k => toks(k).some(w => !have.has(w)));
+}
 function titleHighIssues(d) {
   const L = [], t = d.title || '', h = d.highlights || '', n = len(t), hn = len(h);
-  const kk = kwList(), tH = hits(t, ALL_IDS, toks(brandVal() + ' ' + (kk[0] || ''))), hH = hits(h, ALL_IDS, toks((kk[1] || '') + ' ' + (kk[2] || '')));
+  const kk = kwList(), tH = hits(t, DET_IDS, toks(brandVal() + ' ' + pnameVal() + ' ' + (kk[0] || ''))), hH = hits(h, DET_IDS, toks((kk[1] || '') + ' ' + (kk[2] || '')));
+  const pt = toks(pnameVal()), tt = new Set(toks(t));
+  if (pt.length && pt.filter(w => tt.has(w)).length < Math.ceil(pt.length * 0.6)) L.push('The product name "' + pnameVal() + '" is not fully in the title. Write shorter spec and pack phrases, or give shorter versions of the name under "name".');
   if (n < 60) L.push('The title built from your phrases is only ' + n + ' characters (needs 60-75). Write longer phrases from the product details.');
   if (n > 75) L.push('The title built from your phrases is ' + n + ' characters (maximum 75). Write shorter phrases.');
   const rp = repeatedWords(t);
@@ -372,7 +401,9 @@ function otherIssues(d) {
   });
   const de = d.description || '', dh = hits(de, ALL_IDS, []), need = Math.min(5, Math.ceil(dh.avail / 4));
   if (dh.avail && dh.n < need) L.push('The description uses too few of your product details (' + dh.n + ' found, ' + need + ' needed). Include specific facts: numbers, materials, features, use and package items from the input.');
-  checks(d).filter(x => x.s === 'Fail' && !/^(Title|Brand|Primary|No repeated|Highlights|Every|Exactly 8|Bullet|Backend|Description uses)/.test(x.c)).forEach(x => L.push(x.c + ': ' + x.n));
+  checks(d).filter(x => x.s === 'Fail' && !/^(Title|Brand|Primary|No repeated|Highlights|Every|Exactly 8|Bullet|Backend|Description uses|All your|All keywords|Product name)/.test(x.c)).forEach(x => L.push(x.c + ': ' + x.n));
+  const cv = coverage(d).filter(x => !x.ok);
+  if (cv.length) L.push('These product details are missing or only partly used in the listing: ' + cv.map(x => x.name + ' (missing: ' + x.miss.slice(0, 8).join(', ') + ')').join('; ') + '. Add every missing fact naturally, mainly in the description and in the bullets where it fits. Do not invent anything.');
   if (!d.backend) L.push('Backend search terms are empty. Write lowercase terms separated by single spaces, under 249 bytes, no commas.');
   return L;
 }
@@ -406,7 +437,7 @@ function polish(d) {
 
 function mergeParts(r) {
   if (!r) return;
-  [['titleParts', ['productType', 'spec', 'material', 'benefit']], ['highlightParts', ['details', 'use']]].forEach(([g, keys]) => {
+  [['titleParts', ['name', 'spec', 'pack', 'extra']], ['highlightParts', ['details', 'use']]].forEach(([g, keys]) => {
     const src = r[g] || {}, dst = current.parts[g] = current.parts[g] || {};
     keys.forEach(k => { dst[k] = uniq([...strs(src[k]), ...strs(dst[k])]); });
   });
@@ -418,13 +449,13 @@ function applyOther(r) {
   if (typeof r.backend === 'string' && r.backend.trim()) current.backend = r.backend;
 }
 function partsPrompt(reasons) {
-  return RULES + '\n' + SHAPE_PARTS + '\n' + budgetText() + '\n\n' + details() + '\n\nThe last attempt failed because:\n- ' + reasons.join('\n- ') +
+  return RULES + '\n\n' + details() + '\n\nTASK: read every detail and keyword above again.\n' + SHAPE_PARTS + '\n' + budgetText() + '\n\nThe last attempt failed because:\n- ' + reasons.join('\n- ') +
     '\n\nPhrases already written (write NEW phrases, with other lengths; do not copy these):\n' + JSON.stringify(current.parts) + '\n\nReturn the same JSON shape only.';
 }
 function fixPrompt(issues) {
-  return RULES + '\n' + SHAPE_FIX + '\n\n' + details() + '\n\nCurrent draft:\n' + JSON.stringify({bullets: current.bullets, description: current.description, backend: current.backend}) +
+  return RULES + '\n\n' + details() + '\n\nTASK: read every detail and keyword above again.\n' + SHAPE_FIX + '\n\nCurrent draft:\n' + JSON.stringify({bullets: current.bullets, description: current.description, backend: current.backend}) +
     '\n\nThese rules are broken:\n- ' + issues.join('\n- ') +
-    '\n\nFix the broken items and keep everything else unchanged. The title and highlights are built by the app, so do not write them. Count characters exactly (a bullet counts its label, colon and space) and aim for the middle of each range. Use real facts from the product details. Return the same JSON shape only.';
+    '\n\nFix the broken items and keep everything else unchanged. If product details are missing, put every missing fact into the description (it has no length limit) and into the bullets where they fit. The title and highlights are built by the app, so do not write them. Count characters exactly (a bullet counts its label, colon and space) and aim for the middle of each range. Use real facts from the product details. Return the same JSON shape only.';
 }
 
 let repairErr = '';
@@ -475,7 +506,7 @@ $('go').onclick = () => {
   if (!$('pname').value.trim() && !imgBlob) { msg('bad', 'Add a product name or a product image first.'); return; }
   if (!kwList().length) { msg('bad', 'Add at least one keyword. The first keyword is the main keyword.'); return; }
   if (!['how', 'special', 'tech', 'feat', 'use', 'pack'].some(id => FIELD(id))) { msg('bad', 'Add some product details (features, technical details, main use or package contents). Without them the listing will be generic.'); return; }
-  run(RULES + '\n' + shapeMany() + '\n\n' + details() + (imgBlob ? '\n\nA product image is attached. Use it only for visible facts.' : ''));
+  run(RULES + '\n\nPRODUCT DETAILS AND KEYWORDS. Read every line carefully before you write. Use every detail and every keyword; do not leave anything out.\n' + details() + '\n\nTASK: now, following your role and the strict rules above, create the Amazon listing from these details.\n' + shapeMany() + (imgBlob ? '\n\nA product image is attached. Use it only for visible facts.' : ''));
 };
 
 const len = s => [...(s || '')].length;
@@ -505,7 +536,12 @@ function checks(d) {
   add('Backend under 249 bytes', bytes(be) > 0 && bytes(be) < 249, bytes(be) + ' bytes');
   add('Backend: no commas, lowercase, single spaces', !/,/.test(be) && be === be.toLowerCase() && !/\s{2,}/.test(be) && !/\bb0[a-z0-9]{8}\b/i.test(be), 'Format check');
   add('Description reads naturally', de.length >= 450 && !/^\s*[A-Z][^.\n]{0,40}:\s*$/m.test(de), len(de) + ' characters, no heading lines');
-  { const kk = kwList(), tH = hits(t, ALL_IDS, toks(brandVal() + ' ' + (kk[0] || ''))), hH = hits(h, ALL_IDS, toks((kk[1] || '') + ' ' + (kk[2] || '')));
+  { const kk = kwList(), tH = hits(t, DET_IDS, toks(brandVal() + ' ' + pnameVal() + ' ' + (kk[0] || ''))), hH = hits(h, DET_IDS, toks((kk[1] || '') + ' ' + (kk[2] || '')));
+    { const pt = toks(pnameVal()), tt = new Set(toks(t)), pn = pt.filter(w => tt.has(w)).length;
+      add('Product name in title', !pt.length || pn >= Math.ceil(pt.length * 0.6), pt.length ? pn + ' of ' + pt.length + ' product-name words in title' : 'No product name entered');
+      const pk2 = toks(FIELD('pack')), sp2 = toks(FIELD('tech'));
+      add('Title shows pack details', !pk2.length || pk2.some(w => tt.has(w)), pk2.length ? 'From Package Contains' : 'No package details entered', true);
+      add('Title shows product spec', !sp2.length || sp2.some(w => tt.has(w)), sp2.length ? 'From Technical Details' : 'No technical details entered', true); }
     add('Every title word starts with a capital', titleCase(t) === t, titleCase(t) === t ? 'Title Case' : 'Some words start with a small letter');
     add('Title uses your product details', !tH.avail || tH.n > 0, tH.avail ? tH.n + ' detail word(s) used' : 'No details entered');
     add('Highlights use your product details', !hH.avail || hH.n > 0, hH.avail ? hH.n + ' detail word(s) used' : 'No details entered');
@@ -513,6 +549,9 @@ function checks(d) {
     add('Bullets use your product details', !bf.length, bf.length ? 'No detail used in: ' + bf.join(', ') : 'Every bullet uses a detail');
     const dh = hits(de, ALL_IDS, []), need = Math.min(5, Math.ceil(dh.avail / 4));
     add('Description uses your product details', !dh.avail || dh.n >= need, dh.avail ? dh.n + ' detail words used' : 'No details entered'); }
+  { const cv = coverage(d).filter(x => !x.ok), mk = missingKeywords(d);
+    add('All your product details are used', !cv.length, cv.length ? 'Missing: ' + cv.map(x => x.name).join(', ') : 'Every detail field is covered');
+    add('All keywords used', !mk.length, mk.length ? 'Missing: ' + mk.join(', ') : 'Every keyword appears'); }
   add('No invented claims or package items', false, 'Compare against your own input before publishing', true);
   add('Amazon 2026 compliance', false, 'Final check in Seller Central is still recommended', true);
   return r;
